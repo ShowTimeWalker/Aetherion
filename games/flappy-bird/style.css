@@ -1,0 +1,182 @@
+:root {
+  font-family: "Trebuchet MS", "Microsoft YaHei UI", sans-serif;
+  color: #f8fbff;
+  background:
+    radial-gradient(circle at top, rgba(255, 248, 173, 0.28), transparent 34%),
+    linear-gradient(180deg, #77c9ff 0%, #4ba9f4 44%, #2f86d5 100%);
+  --surface: rgba(16, 71, 122, 0.28);
+  --surface-strong: rgba(10, 53, 95, 0.38);
+  --line: rgba(255, 255, 255, 0.22);
+  --text-muted: rgba(242, 248, 255, 0.9);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+button {
+  font: inherit;
+}
+
+.game-shell {
+  width: min(100%, 820px);
+  display: grid;
+  gap: 18px;
+}
+
+.hero-card,
+.control-card,
+.board-card,
+.footer-card {
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(16, 48, 83, 0.22);
+}
+
+.hero-card,
+.control-card,
+.footer-card {
+  padding: 24px 26px;
+}
+
+.hero-card,
+.control-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.badge {
+  margin: 0 0 8px;
+  color: #fef0a8;
+  font-size: 0.82rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.badge--muted {
+  color: #dcedff;
+}
+
+h1 {
+  margin: 0;
+  font-family: "Palatino Linotype", "Times New Roman", serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  line-height: 0.95;
+}
+
+.tip,
+.status,
+.footer-card p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.score-cluster {
+  display: flex;
+  gap: 12px;
+}
+
+.score-panel {
+  min-width: 110px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.score-panel span {
+  display: block;
+  color: #fef0a8;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+}
+
+.score-panel strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+}
+
+.control-card button {
+  min-width: 132px;
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(63, 149, 232, 0.2));
+  color: #f8fbff;
+  cursor: pointer;
+}
+
+.control-card button:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.board-card {
+  padding: 16px;
+  background: var(--surface-strong);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  margin: 0 auto;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #97dfff 0%, #69c4ff 52%, #77d57b 52%, #5bb55d 100%);
+  touch-action: manipulation;
+}
+
+.footer-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.footer-card p {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  body {
+    padding: 14px;
+  }
+
+  .hero-card,
+  .control-card,
+  .footer-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .score-cluster {
+    width: 100%;
+  }
+
+  .score-panel {
+    flex: 1;
+  }
+
+  canvas {
+    max-height: none;
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>贪吃蛇</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="game-header">
+        <div>
+          <p class="badge">Aetherion / Snake</p>
+          <h1>贪吃蛇</h1>
+          <p class="tip">方向键控制移动，吃到光点即可成长。撞墙或撞到自己则结束。</p>
+        </div>
+        <div class="scoreboard">
+          <span>分数</span>
+          <strong id="score">0</strong>
+        </div>
+      </header>
+
+      <section class="board-card">
+        <canvas id="board" width="480" height="480" aria-label="贪吃蛇游戏画布"></canvas>
+      </section>
+
+      <footer class="game-footer">
+        <button id="restart" type="button">重新开始</button>
+        <p id="status">按下方向键开始。</p>
+      </footer>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
+

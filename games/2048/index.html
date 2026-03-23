@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2048</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hero-card">
+        <div>
+          <p class="badge">Aetherion / 2048</p>
+          <h1>2048</h1>
+          <p class="tip">使用方向键滑动方块，相同数字会合并。移动端可直接滑动棋盘。</p>
+        </div>
+
+        <div class="score-cluster" aria-label="当前分数信息">
+          <section class="score-panel">
+            <span>分数</span>
+            <strong id="score">0</strong>
+          </section>
+          <section class="score-panel">
+            <span>最佳</span>
+            <strong id="best-score">0</strong>
+          </section>
+        </div>
+      </header>
+
+      <section class="control-card">
+        <div>
+          <p class="badge badge--muted">状态</p>
+          <p id="status" class="status">合并数字，尽快做出 2048。</p>
+        </div>
+
+        <button id="restart" type="button">重新开始</button>
+      </section>
+
+      <section class="board-card">
+        <div id="board" class="board" role="grid" aria-label="2048 游戏棋盘"></div>
+      </section>
+
+      <footer class="footer-card">
+        <p>操作：↑ ↓ ← →</p>
+        <p>规则：每次移动后都会生成一个新方块，无法移动时游戏结束。</p>
+      </footer>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
