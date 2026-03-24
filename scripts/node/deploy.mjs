@@ -167,6 +167,10 @@ function runRemoteDeploy(remoteCommand) {
     return;
   }
 
+  console.error(`未找到本地 SSH 配置: ${sshConfigPath}`);
+  console.error("将尝试使用系统 ssh 直接登录服务器。");
+  console.error("如果失败，请恢复 .local-secrets/ssh/server.json 或配置可用的 SSH 私钥。");
+
   const remoteScript = readFileSync(remoteDeployScriptPath, "utf8");
 
   runCommand(
