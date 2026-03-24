@@ -2,208 +2,396 @@
 
 ## 部署目标
 
-当前项目的正式部署方案为：
+本项目的部署目标是：
 
-- 代码托管：`Gitee`
-- 流水线：`Gitee Go`
-- 部署执行位置：云服务器本机
-- Web 服务：`Nginx`
-- 发布目录：`dist/ -> /var/www/aetherion`
-
-生产域名仍为：
-
-```text
-https://noah-bot.cloud
-```
+- 代码托管在 GitHub 私有仓库
+- 本地开发完成后推送到 `main`
+- GitHub Actions 自动触发部署
+- 云服务器自动拉取最新代码
+- 服务器执行 `pnpm build`
+- 将 `dist/` 发布到 Nginx 站点目录
+- 最终通过 `noah-bot.cloud` 对外访问
 
 ---
 
-## 当前部署链路
+## 当前部署方案
+
+本期采用 MVP 方案：
+
+1. 前端门户技术栈：`Vite + Vue 3 + TypeScript`
+2. 小游戏目录：`games/`
+3. 服务器系统：`Ubuntu / Debian`
+4. Web 服务：`Nginx`
+5. 自动化触发：`GitHub Actions`
+6. 发布方式：服务器本机构建后发布静态文件
+
+部署链路如下：
 
 ```text
-本地开发
--> git push origin main
--> Gitee Go 监听 main
--> Gitee Go 调用服务器 Agent 主机组
--> 服务器执行 scripts/server/deploy.sh
--> git pull origin main
--> pnpm install --frozen-lockfile
--> pnpm build
--> rsync dist/ /var/www/aetherion/
--> reload nginx
+本地修改代码
+-> git add / commit / push origin main
+-> GitHub Actions 触发
+-> Actions SSH 登录服务器
+-> 服务器执行 git pull origin main
+-> 服务器执行 pnpm build
+-> 将 dist/ 同步到 Nginx 发布目录
+-> sudo systemctl reload nginx
+-> noah-bot.cloud 更新
 ```
-
----
-
-## 仓库内关键文件
-
-- [`/.workflow/MasterPipeline.yml`](C:/Users/Noah/Documents/vscode/Aetherion/.workflow/MasterPipeline.yml)：Gitee Go 生产流水线
-- [`/scripts/server/deploy.sh`](C:/Users/Noah/Documents/vscode/Aetherion/scripts/server/deploy.sh)：服务器部署脚本
-- [`/GITEE_GO_WORKFLOW.md`](C:/Users/Noah/Documents/vscode/Aetherion/GITEE_GO_WORKFLOW.md)：完整迁移与配置说明
 
 ---
 
 ## 服务器目录约定
 
+建议服务器使用如下目录：
+
 ```text
-/opt/aetherion        # Git 工作目录
+/opt/aetherion        # Git 仓库工作目录
 /var/www/aetherion    # Nginx 对外发布目录
 ```
 
 说明：
 
-- `/opt/aetherion` 保存源码与构建上下文
-- `/var/www/aetherion` 只保存最终静态产物
+1. `/opt/aetherion`
+   - 用于保存 Git 仓库源码
+   - GitHub Actions 登录服务器后，在这里执行 `git pull`
+   - 再在这里执行 `pnpm build`
+
+2. `/var/www/aetherion`
+   - 用于保存实际发布的静态文件
+   - Nginx 站点根目录指向这里
+   - 最终对外访问的是这个目录，不是源码目录
 
 ---
 
-## 服务器环境要求
+## 服务器环境准备
 
-至少具备：
+服务器至少需要安装：
 
 1. `git`
 2. `node`
 3. `pnpm`
-4. `rsync`
-5. `nginx`
+4. `nginx`
 
-建议验证：
+### Node 与 pnpm
+
+需要保证服务器可执行：
 
 ```bash
 node -v
 pnpm -v
-git --version
-rsync --version
 ```
 
----
+推荐使用稳定版本的 Node 20 或更高版本。
 
-## Gitee 仓库要求
+### 初始化源码目录
 
-服务器需要能通过 SSH 拉取 Gitee 私有仓库。
-
-推荐做法：
-
-1. 服务器生成单独的 Gitee 部署密钥
-2. 公钥添加到 Gitee 仓库“部署公钥管理”
-3. `/opt/aetherion` 的 `origin` 指向 Gitee 仓库
-
-示例：
+首次部署前，在服务器准备目录：
 
 ```bash
-ssh-keygen -t ed25519 -C "aetherion-server-gitee" -f ~/.ssh/aetherion_gitee_deploy -N ""
-ssh -T git@gitee.com
-cd /opt/aetherion
-git remote set-url origin git@gitee.com:<your-namespace>/Aetherion.git
-git fetch origin main
+sudo mkdir -p /opt/aetherion
+sudo mkdir -p /var/www/aetherion
+sudo chown -R <deploy-user>:<deploy-user> /opt/aetherion
+sudo chown -R <deploy-user>:<deploy-user> /var/www/aetherion
 ```
+
+其中 `<deploy-user>` 为部署用户。
 
 ---
 
-## Gitee Go 流水线要求
+## GitHub 私有仓库拉取权限
 
-仓库中已提供基础流水线：
+服务器需要能够拉取 GitHub 私有仓库。
 
-[`/.workflow/MasterPipeline.yml`](C:/Users/Noah/Documents/vscode/Aetherion/.workflow/MasterPipeline.yml)
+这里采用 `Deploy Key`。
 
-你需要确认两件事：
+### 1. 在服务器生成 SSH Key
 
-1. `hostGroupID` 已替换为真实主机组 ID
-2. `APP_DIR` / `SITE_DIR` / `BRANCH` 等变量与你服务器一致
+```bash
+ssh-keygen -t ed25519 -C "aetherion-deploy"
+```
 
-当前默认值为：
+假设生成在：
 
 ```text
-APP_DIR=/opt/aetherion
-SITE_DIR=/var/www/aetherion
-BRANCH=main
-NGINX_SERVICE_NAME=nginx
-RELOAD_NGINX=true
+~/.ssh/id_ed25519
+~/.ssh/id_ed25519.pub
 ```
 
----
+### 2. 将公钥添加到 GitHub 仓库
 
-## 服务器部署脚本逻辑
+进入 GitHub 仓库：
 
-`scripts/server/deploy.sh` 的实际逻辑是：
+`Settings -> Deploy keys -> Add deploy key`
+
+添加：
+
+- Title：`aetherion-server`
+- Key：服务器生成的公钥内容
+- 权限：只读即可
+
+### 3. 在服务器测试 GitHub 连接
+
+```bash
+ssh -T git@github.com
+```
+
+然后首次拉取仓库：
 
 ```bash
 cd /opt/aetherion
-git fetch origin main
-git pull --ff-only origin main
-pnpm install --frozen-lockfile
-pnpm build
-rsync -av --delete dist/ /var/www/aetherion/
-sudo -n systemctl reload nginx
+git clone git@github.com:<owner>/<repo>.git .
 ```
-
-这也是后续排障时最先应该验证的部分。
 
 ---
 
-## 日常发布流程
+## GitHub Actions 登录服务器权限
 
-```bash
-pnpm build
-git add .
-git commit -m "your message"
-git push origin main
+除了服务器拉 GitHub 的 `Deploy Key`，还需要一套独立凭据，让 GitHub Actions 能 SSH 登录服务器执行部署命令。
+
+### 1. 为 Actions 准备登录服务器的 SSH Key
+
+可以在本地或服务器生成一套专门给 Actions 使用的密钥。
+
+公钥写入服务器部署用户的：
+
+```text
+~/.ssh/authorized_keys
+```
+
+私钥写入 GitHub 仓库 `Secrets`。
+
+### 2. GitHub Secrets 规划
+
+仓库中至少配置以下 Secrets：
+
+| 名称 | 说明 |
+| --- | --- |
+| `SERVER_HOST` | 服务器 IP 或域名 |
+| `SERVER_PORT` | SSH 端口，通常是 `22` |
+| `SERVER_USER` | 部署用户名 |
+| `SERVER_SSH_KEY` | GitHub Actions 使用的私钥 |
+
+---
+
+## Nginx 配置
+
+站点域名为：
+
+```text
+noah-bot.cloud
+```
+
+Nginx 的站点根目录建议指向：
+
+```text
+/var/www/aetherion
+```
+
+### 示例配置
+
+```nginx
+server {
+    listen 80;
+    server_name noah-bot.cloud;
+
+    root /var/www/aetherion;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
 ```
 
 说明：
 
-- `origin` 应指向 Gitee
-- `main` 为生产分支
-- push 后由 Gitee Go 自动部署
+1. 这里使用前端路由兜底到 `index.html`
+2. 因为门户使用 Vue Router，所以刷新 `/play/snake` 时也必须能回到前端入口
+
+配置完成后执行：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
 
 ---
 
-## 验收标准
+## 项目构建与发布方式
 
-至少确认：
+当前项目的发布目标是 `dist/`。
 
-1. `pnpm build` 本地可成功执行
-2. Gitee Go 流水线能被 `main` 分支 push 正常触发
-3. `dist/game-manifest.json` 已生成
-4. `dist/games/<slug>/index.html` 存在
-5. 首页能展示对应游戏
-6. `/play/<slug>` 可通过 `iframe` 正常打开游戏
-7. 服务器 `/var/www/aetherion` 已同步到最新构建产物
+### 本地开发
+
+```bash
+pnpm install
+pnpm dev
+```
+
+### 生产构建
+
+```bash
+pnpm build
+```
+
+构建过程会自动做两件事：
+
+1. 扫描 `games/`，生成 `public/game-manifest.json`
+2. 将 `games/` 复制到构建产物中
+
+最终产物结构类似：
+
+```text
+dist/
+  index.html
+  assets/
+  game-manifest.json
+  games/
+    snake/
+      index.html
+      game.js
+      style.css
+```
 
 ---
 
-## 常见排查
+## 推荐部署脚本逻辑
 
-### 1. Gitee Go 没触发
+后续服务器上的部署脚本建议固定为如下逻辑：
 
-优先检查：
+```bash
+cd /opt/aetherion
+git pull origin main
+pnpm install --frozen-lockfile
+pnpm build
+rsync -av --delete dist/ /var/www/aetherion/
+sudo systemctl reload nginx
+```
 
-- 是否推送到了 Gitee 的 `main`
-- `MasterPipeline.yml` 是否已被 Gitee 识别
-- 主机组是否绑定当前仓库
+说明：
 
-### 2. 服务器拉代码失败
+1. `pnpm install --frozen-lockfile`
+   - 用于确保依赖与锁文件一致
 
-优先检查：
+2. `rsync -av --delete`
+   - 用于把最新构建产物同步到站点目录
+   - `--delete` 可以清理旧文件，避免残留
 
-- `/opt/aetherion` 的 `origin` 是否还是 GitHub
-- Gitee 部署公钥是否已经添加
-- `ssh -T git@gitee.com` 是否通过
+3. `reload nginx`
+   - 静态站点理论上不一定每次都必须 reload
+   - 但保留该步骤更统一
 
-### 3. 站点未更新
+---
 
-优先检查：
+## GitHub Actions 计划
 
-- `SITE_DIR` 是否正确
-- `rsync` 是否成功执行
-- `Nginx` 根目录是否是 `/var/www/aetherion`
+后续在仓库中添加：
 
-### 4. nginx reload 失败
+```text
+.github/workflows/deploy.yml
+```
 
-优先检查：
+核心触发条件：
+
+```yaml
+on:
+  push:
+    branches: [main]
+```
+
+工作流职责：
+
+1. 监听 `main` 分支 `push`
+2. SSH 登录服务器
+3. 远程执行部署命令
+
+建议远程执行的命令尽量收敛到服务器脚本中，不要把过长的部署逻辑全部直接写在 workflow 里。
+
+当前仓库已落地：
+
+```text
+.github/workflows/deploy.yml
+scripts/server/deploy.sh
+```
+
+说明：
+
+1. `.github/workflows/deploy.yml`
+   - 监听 `main` 的 `push`
+   - 同时支持手动 `workflow_dispatch`
+   - 通过 SSH 登录服务器
+   - 将仓库内的 `scripts/server/deploy.sh` 直接发送到服务器执行
+
+2. `scripts/server/deploy.sh`
+   - 在服务器执行 `git pull --ff-only`
+   - 执行 `pnpm install --frozen-lockfile`
+   - 执行 `pnpm build`
+   - 使用 `rsync -av --delete` 同步 `dist/`
+   - 可选执行 `sudo systemctl reload nginx`
+
+### GitHub Actions 必填 Secrets
+
+仓库 `Settings -> Secrets and variables -> Actions` 中至少配置：
+
+| 名称 | 说明 |
+| --- | --- |
+| `SERVER_HOST` | 服务器 IP 或域名 |
+| `SERVER_PORT` | SSH 端口，可填 `22` |
+| `SERVER_USER` | 部署用户名 |
+| `SERVER_SSH_KEY` | GitHub Actions 使用的私钥 |
+
+### GitHub Actions 可选 Variables
+
+如不配置，则使用默认值：
+
+| 名称 | 默认值 | 说明 |
+| --- | --- | --- |
+| `SERVER_APP_DIR` | `/opt/aetherion` | 服务器源码目录 |
+| `SERVER_SITE_DIR` | `/var/www/aetherion` | Nginx 发布目录 |
+| `DEPLOY_BRANCH` | `main` | 部署分支 |
+| `NGINX_SERVICE_NAME` | `nginx` | `systemctl reload` 的服务名 |
+| `RELOAD_NGINX` | `true` | 是否 reload Nginx |
+
+### 服务器额外要求
+
+为了让 workflow 能稳定执行，服务器还需要满足：
+
+1. `/opt/aetherion` 已经完成首次 `git clone`
+2. 部署用户对 `/var/www/aetherion` 有写权限
+3. 若启用 `RELOAD_NGINX=true`，部署用户可以无密码执行：
 
 ```bash
 sudo -n systemctl reload nginx
 ```
 
-如果这里需要密码，流水线最后一步就会失败。
+如果当前用户默认需要输入密码，建议通过 `sudoers` 为该命令单独放行，否则 Actions 会在 reload 步骤失败。
+
+---
+
+## 部署验收清单
+
+完成自动部署后，至少验证以下内容：
+
+1. 服务器可手动 `git pull origin main`
+2. 服务器可手动 `pnpm build`
+3. `dist/` 中存在门户入口和 `dist/games/snake/index.html`
+4. Nginx 能正常打开 `http://noah-bot.cloud`
+5. 打开 `http://noah-bot.cloud/play/snake` 时可正常进入游戏页面
+6. 本地修改门户内容并 `push` 后，线上自动更新
+7. 本地修改 `games/snake/` 内容并 `push` 后，线上自动更新
+
+---
+
+## 当前不包含的内容
+
+本期先不做：
+
+1. Docker 化部署
+2. 多环境部署
+3. 自动回滚
+4. 蓝绿发布
+5. CDN 分发
+6. 用户系统或后台管理
+
+MVP 先保证链路打通，后续再逐步增强。
