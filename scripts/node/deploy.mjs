@@ -37,9 +37,10 @@ assertSshSupport();
 
 logStep("检查当前分支");
 const currentBranch = runCommand("git", ["branch", "--show-current"], { captureStdout: true }).trim();
+const sourceRef = currentBranch || "HEAD";
 
-if (currentBranch !== config.branch) {
-  fail(`当前分支是 ${currentBranch || "(unknown)"}，只能从 ${config.branch} 执行发布`);
+if (currentBranch && currentBranch !== config.branch) {
+  console.log(`当前分支是 ${currentBranch}，将把当前提交发布到 ${config.remote}/${config.branch}`);
 }
 
 logStep("检查工作区是否干净");
@@ -54,8 +55,8 @@ if (!args.has("--skip-build")) {
   runCommand("pnpm", ["build"]);
 }
 
-logStep(`推送 ${config.remote}/${config.branch}`);
-runCommand("git", ["push", config.remote, config.branch]);
+logStep(`推送 ${sourceRef} -> ${config.remote}/${config.branch}`);
+runCommand("git", ["push", config.remote, `${sourceRef}:${config.branch}`]);
 
 logStep("触发服务器部署");
 const remoteCommand = buildRemoteCommand(config);
@@ -72,10 +73,10 @@ function printHelp() {
   pnpm run deploy -- --skip-build
 
 默认行为:
-  1. 检查当前分支是否为 deploy_gitee
+  1. 检查当前分支并确定发布来源
   2. 检查工作区是否干净
   3. 执行本地 pnpm build
-  4. 推送到 origin/deploy_gitee
+  4. 将当前 HEAD 推送到 origin/deploy_gitee
   5. SSH 登录服务器并执行 scripts/server/deploy.sh
 
 可覆盖环境变量:
