@@ -9,6 +9,7 @@ const sshConfigPath = process.env.DEPLOY_SSH_CONFIG ?? join(rootDir, ".local-sec
 const sshHelperScriptPath = join(rootDir, "scripts", "node", "ssh_exec.py");
 
 const args = new Set(process.argv.slice(2));
+const isDryRun = args.has("--dry-run");
 
 const config = {
   remote: process.env.DEPLOY_REMOTE ?? "origin",
@@ -55,11 +56,20 @@ if (!args.has("--skip-build")) {
   runCommand("pnpm", ["build"]);
 }
 
+const remoteCommand = buildRemoteCommand(config);
+
+if (isDryRun) {
+  logStep("Dry run 验证完成");
+  console.log("已完成本地检查，未执行 git push 或服务器部署。");
+  console.log(`计划推送: git push ${config.remote} ${sourceRef}:${config.branch}`);
+  console.log(`计划远程命令: ${remoteCommand}`);
+  process.exit(0);
+}
+
 logStep(`推送 ${sourceRef} -> ${config.remote}/${config.branch}`);
 runCommand("git", ["push", config.remote, `${sourceRef}:${config.branch}`]);
 
 logStep("触发服务器部署");
-const remoteCommand = buildRemoteCommand(config);
 runRemoteDeploy(remoteCommand);
 
 console.log("");
@@ -71,6 +81,7 @@ function printHelp() {
 用法:
   pnpm run deploy
   pnpm run deploy -- --skip-build
+  pnpm run deploy -- --dry-run
 
 默认行为:
   1. 检查当前分支并确定发布来源
@@ -78,6 +89,10 @@ function printHelp() {
   3. 执行本地 pnpm build
   4. 将当前 HEAD 推送到 origin/deploy_gitee
   5. SSH 登录服务器并执行 scripts/server/deploy.sh
+
+附加参数:
+  --skip-build  跳过本地构建检查
+  --dry-run     只做本地校验并输出计划动作，不执行推送和远程部署
 
 可覆盖环境变量:
   DEPLOY_REMOTE

@@ -23,11 +23,11 @@ onMounted(async () => {
 <template>
   <section class="hero" id="overview">
     <div class="hero__copy">
-      <p class="hero__eyebrow">Portal / MVP</p>
-      <h1 class="hero__headline">辣鸡小游戏测试网站</h1>
+      <p class="hero__eyebrow">🎮 欢迎来到</p>
+      <h1 class="hero__headline">Aetherion 游戏世界</h1>
       <p class="hero__lead">
-        Aetherion
-        负责承载门户、展示游戏列表，并通过统一入口接入各个独立小游戏目录。
+        在这里探索各种有趣的小游戏，放松一下吧！✨<br />
+        每一个游戏都是一次小小的冒险，等你来发现。
       </p>
 
     </div>
