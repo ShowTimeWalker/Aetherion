@@ -243,6 +243,12 @@ pnpm build
 pnpm run deploy -- --dry-run
 ```
 
+如果当前工作区仍有未提交修改，但你只想验证命令链路本身，也可执行：
+
+```bash
+pnpm run deploy -- --dry-run --allow-dirty
+```
+
 说明：
 
 1. 该命令会检查当前分支、工作区状态以及本地构建是否通过

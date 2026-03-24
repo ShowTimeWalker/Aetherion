@@ -2,7 +2,7 @@
   font-family: "Trebuchet MS", "Microsoft YaHei UI", sans-serif;
   color: #f4efe6;
   background:
-    radial-gradient(circle at top, rgba(183, 141, 75, 0.18), transparent 36%),
+    radial-gradient(circle at top, rgba(138, 100, 220, 0.15), transparent 36%),
     linear-gradient(180deg, #0f1724 0%, #111b2d 48%, #0b1220 100%);
   color-scheme: dark;
   text-rendering: optimizeLegibility;
@@ -12,8 +12,10 @@
   --surface-strong: rgba(10, 16, 27, 0.92);
   --line: rgba(215, 184, 120, 0.2);
   --line-strong: rgba(215, 184, 120, 0.45);
-  --gold: #d6b16e;
+  --gold: #e8c574;
   --gold-deep: #9d7435;
+  --accent-purple: #a78bfa;
+  --accent-blue: #60a5fa;
   --text-muted: #c2c6d2;
   --danger: #ef7676;
 }
@@ -93,8 +95,8 @@ select {
   height: 48px;
   border-radius: 16px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, rgba(214, 177, 110, 0.28), rgba(97, 58, 18, 0.3));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.28), rgba(96, 165, 250, 0.18), rgba(214, 177, 110, 0.28));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 20px rgba(167, 139, 250, 0.15);
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 1.5rem;
   color: #fff2ce;
@@ -200,14 +202,33 @@ select {
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: linear-gradient(180deg, rgba(214, 177, 110, 0.18), rgba(157, 116, 53, 0.12));
-  transition: transform 160ms ease, border-color 160ms ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.game-card__action::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: -1;
+  filter: blur(8px);
+}
+
+.game-card:hover .game-card__action::before {
+  opacity: 0.6;
 }
 
 .hero__actions a:hover,
 .play-shell__link:hover,
 .game-card__action:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: rgba(255, 228, 170, 0.7);
+  background: linear-gradient(180deg, rgba(214, 177, 110, 0.28), rgba(157, 116, 53, 0.18));
+  box-shadow: 0 8px 20px rgba(167, 139, 250, 0.3);
 }
 
 .hero__actions span {
@@ -259,6 +280,15 @@ select {
 
 .game-card {
   overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.game-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 60px rgba(167, 139, 250, 0.25),
+              0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .game-card__visual {
@@ -271,12 +301,40 @@ select {
   background-size: cover;
   background-position: center;
   border-bottom: 1px solid var(--line);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card:hover .game-card__visual {
+  transform: scale(1.05);
+}
+
+.game-card__visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(96, 165, 250, 0.15));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.game-card:hover .game-card__visual::after {
+  opacity: 1;
 }
 
 .game-card__monogram {
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 4rem;
   color: rgba(255, 245, 217, 0.9);
+  transition: transform 0.3s ease, color 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.game-card:hover .game-card__monogram {
+  transform: scale(1.1);
+  color: rgba(255, 245, 217, 1);
 }
 
 .game-card__body {

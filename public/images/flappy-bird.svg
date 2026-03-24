@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#grad3)"/>
+  <!-- Bird -->
+  <ellipse cx="200" cy="150" rx="35" ry="28" fill="#FFD93D"/>
+  <circle cx="215" cy="145" r="8" fill="white"/>
+  <circle cx="218" cy="145" r="4" fill="black"/>
+  <path d="M 235 150 L 260 155 L 235 160 Z" fill="#FF8C42"/>
+  <!-- Wing -->
+  <ellipse cx="185" cy="160" rx="18" ry="12" fill="#FFA500" opacity="0.8"/>
+  <!-- Pipes -->
+  <rect x="80" y="0" width="40" height="120" fill="#2ECC71"/>
+  <rect x="80" y="200" width="40" height="100" fill="#2ECC71"/>
+  <rect x="280" y="0" width="40" height="180" fill="#2ECC71"/>
+  <rect x="280" y="260" width="40" height="40" fill="#2ECC71"/>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">Flappy Bird</text>
+</svg>

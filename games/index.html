@@ -45,43 +45,205 @@
         padding: 0;
         margin: 28px 0 0;
         display: grid;
-        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
       }
 
       a {
-        display: block;
-        padding: 18px 20px;
-        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 18px;
+        border-radius: 14px;
         text-decoration: none;
         color: inherit;
         background: rgba(15, 23, 42, 0.88);
         border: 1px solid rgba(148, 163, 184, 0.22);
+        transition: all 0.2s ease;
       }
 
       a:hover {
         border-color: rgba(74, 222, 128, 0.7);
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
       }
 
-      strong {
+      .game-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .game-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .game-title {
         display: block;
-        margin-bottom: 6px;
-        font-size: 1.05rem;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 4px;
+      }
+
+      .game-desc {
+        display: block;
+        font-size: 0.85rem;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 2048 - 橙色方块 */
+      .icon-2048 {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+      }
+
+      /* Breakout - 紫色砖块 */
+      .icon-breakout {
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+      }
+
+      /* Flappy Bird - 天蓝小鸟 */
+      .icon-flappy {
+        background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      }
+
+      /* Jump Game - 绿色跳跃 */
+      .icon-jump {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+      }
+
+      /* Minesweeper - 红色地雷 */
+      .icon-minesweeper {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+
+      /* Snake - 绿色蛇 */
+      .icon-snake {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      svg {
+        width: 28px;
+        height: 28px;
+        fill: white;
       }
     </style>
   </head>
   <body>
     <main>
       <h2>Aetherion 游戏目录</h2>
-      <p>这里是 `games/` 下各独立小游戏的静态入口列表。</p>
+      <p>点击任意游戏开始游玩</p>
 
       <ul>
-        <li><a href="./2048/index.html"><strong>2048</strong><span>数字合成挑战</span></a></li>
-        <li><a href="./breakout/index.html"><strong>Breakout</strong><span>经典打砖块</span></a></li>
-        <li><a href="./flappy-bird/index.html"><strong>Flappy Bird</strong><span>像素风穿越障碍</span></a></li>
-        <li><a href="./jump-game/index.html"><strong>Jump Game</strong><span>节奏跳跃挑战</span></a></li>
-        <li><a href="./minesweeper/index.html"><strong>扫雷</strong><span>9x9 初级难度经典扫雷</span></a></li>
-        <li><a href="./snake/index.html"><strong>Snake</strong><span>经典贪吃蛇</span></a></li>
+        <li>
+          <a href="./2048/index.html">
+            <div class="game-icon icon-2048">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="3" width="8" height="8" rx="1"/>
+                <rect x="13" y="3" width="8" height="8" rx="1"/>
+                <rect x="3" y="13" width="8" height="8" rx="1"/>
+                <rect x="13" y="13" width="8" height="8" rx="1" opacity="0.5"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">2048</span>
+              <span class="game-desc">数字合成挑战</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="./breakout/index.html">
+            <div class="game-icon icon-breakout">
+              <svg viewBox="0 0 24 24">
+                <rect x="2" y="4" width="20" height="4" rx="1"/>
+                <rect x="2" y="10" width="20" height="4" rx="1"/>
+                <rect x="2" y="16" width="20" height="4" rx="1"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">Breakout</span>
+              <span class="game-desc">经典打砖块</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="./flappy-bird/index.html">
+            <div class="game-icon icon-flappy">
+              <svg viewBox="0 0 24 24">
+                <ellipse cx="12" cy="12" rx="8" ry="6"/>
+                <circle cx="15" cy="10" r="1.5" fill="#0f172a"/>
+                <path d="M20 12 L24 10 L24 14 Z" fill="#fbbf24"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">Flappy Bird</span>
+              <span class="game-desc">像素风穿越障碍</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="./jump-game/index.html">
+            <div class="game-icon icon-jump">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="6" r="4"/>
+                <rect x="8" y="10" width="8" height="8" rx="2"/>
+                <rect x="6" y="18" width="4" height="4" rx="1"/>
+                <rect x="14" y="18" width="4" height="4" rx="1"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">Jump Game</span>
+              <span class="game-desc">节奏跳跃挑战</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="./minesweeper/index.html">
+            <div class="game-icon icon-minesweeper">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="6" opacity="0.3"/>
+                <circle cx="12" cy="12" r="3"/>
+                <line x1="12" y1="3" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                <line x1="12" y1="18" x2="12" y2="21" stroke="white" stroke-width="2"/>
+                <line x1="3" y1="12" x2="6" y2="12" stroke="white" stroke-width="2"/>
+                <line x1="18" y1="12" x2="21" y2="12" stroke="white" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">扫雷</span>
+              <span class="game-desc">9×9 初级难度经典扫雷</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="./snake/index.html">
+            <div class="game-icon icon-snake">
+              <svg viewBox="0 0 24 24">
+                <circle cx="8" cy="12" r="3"/>
+                <circle cx="14" cy="12" r="3" opacity="0.8"/>
+                <circle cx="19" cy="12" r="2.5" opacity="0.6"/>
+                <circle cx="6" cy="10" r="0.8" fill="#0f172a"/>
+                <circle cx="9" cy="10" r="0.8" fill="#0f172a"/>
+              </svg>
+            </div>
+            <div class="game-info">
+              <span class="game-title">Snake</span>
+              <span class="game-desc">经典贪吃蛇</span>
+            </div>
+          </a>
+        </li>
       </ul>
     </main>
   </body>

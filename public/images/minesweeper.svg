@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#grad5)"/>
+  <!-- Grid -->
+  <rect x="50" y="80" width="300" height="180" fill="#95A5A6" stroke="#7F8C8D" stroke-width="2"/>
+  <!-- Cells -->
+  <rect x="60" y="90" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="115" y="90" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="170" y="90" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="225" y="90" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="280" y="90" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <!-- Mine -->
+  <circle cx="137" cy="112" r="18" fill="black"/>
+  <line x1="137" y1="90" x2="137" y2="134" stroke="black" stroke-width="3"/>
+  <line x1="115" y1="112" x2="159" y2="112" stroke="black" stroke-width="3"/>
+  <line x1="121" y1="96" x2="153" y2="128" stroke="black" stroke-width="3"/>
+  <line x1="153" y1="96" x2="121" y2="128" stroke="black" stroke-width="3"/>
+  <!-- Numbers -->
+  <text x="192" y="122" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#3498DB" text-anchor="middle">1</text>
+  <text x="247" y="122" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#E74C3C" text-anchor="middle">3</text>
+  <!-- More cells -->
+  <rect x="60" y="145" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="115" y="145" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="170" y="145" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="225" y="145" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <rect x="280" y="145" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <text x="82" y="177" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#2ECC71" text-anchor="middle">2</text>
+  <text x="247" y="177" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#E74C3C" text-anchor="middle">1</text>
+  <text x="302" y="177" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#3498DB" text-anchor="middle">1</text>
+  <!-- Flag -->
+  <rect x="60" y="200" width="45" height="45" fill="#BDC3C7" stroke="#7F8C8D"/>
+  <path d="M 82 208 L 82 238 M 82 208 L 98 215 L 82 222" fill="#E74C3C" stroke="#E74C3C" stroke-width="2"/>
+  <text x="200" y="60" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle">扫雷</text>
+</svg>

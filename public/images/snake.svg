@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#11998e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38ef7d;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#grad6)"/>
+  <!-- Snake body -->
+  <circle cx="280" cy="150" r="18" fill="#2ECC71"/>
+  <circle cx="260" cy="150" r="18" fill="#27AE60"/>
+  <circle cx="240" cy="150" r="18" fill="#2ECC71"/>
+  <circle cx="220" cy="150" r="18" fill="#27AE60"/>
+  <circle cx="200" cy="150" r="18" fill="#2ECC71"/>
+  <circle cx="180" cy="150" r="18" fill="#27AE60"/>
+  <circle cx="160" cy="150" r="18" fill="#2ECC71"/>
+  <!-- Snake head -->
+  <circle cx="300" cy="150" r="20" fill="#2ECC71"/>
+  <circle cx="307" cy="145" r="5" fill="white"/>
+  <circle cx="307" cy="155" r="5" fill="white"/>
+  <circle cx="309" cy="145" r="2" fill="black"/>
+  <circle cx="309" cy="155" r="2" fill="black"/>
+  <!-- Tongue -->
+  <path d="M 320 150 L 340 145 M 320 150 L 340 155" stroke="#E74C3C" stroke-width="3" stroke-linecap="round"/>
+  <!-- Food (apple) -->
+  <circle cx="100" cy="150" r="15" fill="#E74C3C"/>
+  <rect x="97" y="130" width="6" height="8" fill="#8B4513"/>
+  <ellipse cx="107" cy="133" rx="6" ry="4" fill="#2ECC71"/>
+  <text x="200" y="250" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle">贪吃蛇</text>
+</svg>

@@ -10,6 +10,7 @@ const sshHelperScriptPath = join(rootDir, "scripts", "node", "ssh_exec.py");
 
 const args = new Set(process.argv.slice(2));
 const isDryRun = args.has("--dry-run");
+const allowDirty = args.has("--allow-dirty");
 
 const config = {
   remote: process.env.DEPLOY_REMOTE ?? "origin",
@@ -48,7 +49,11 @@ logStep("检查工作区是否干净");
 const workingTreeStatus = runCommand("git", ["status", "--short"], { captureStdout: true }).trim();
 
 if (workingTreeStatus) {
-  fail("当前工作区存在未提交修改，请先提交后再发布");
+  if (isDryRun && allowDirty) {
+    console.log("检测到未提交修改；因启用了 --allow-dirty，将继续进行 dry-run 验证。");
+  } else {
+    fail("当前工作区存在未提交修改，请先提交后再发布");
+  }
 }
 
 if (!args.has("--skip-build")) {
@@ -82,6 +87,7 @@ function printHelp() {
   pnpm run deploy
   pnpm run deploy -- --skip-build
   pnpm run deploy -- --dry-run
+  pnpm run deploy -- --dry-run --allow-dirty
 
 默认行为:
   1. 检查当前分支并确定发布来源
@@ -93,6 +99,7 @@ function printHelp() {
 附加参数:
   --skip-build  跳过本地构建检查
   --dry-run     只做本地校验并输出计划动作，不执行推送和远程部署
+  --allow-dirty 仅在 dry-run 模式下允许带未提交修改继续验证
 
 可覆盖环境变量:
   DEPLOY_REMOTE
