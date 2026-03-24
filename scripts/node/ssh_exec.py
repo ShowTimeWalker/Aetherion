@@ -1,6 +1,6 @@
 import argparse
+import io
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -73,15 +73,16 @@ def main() -> int:
 
       if args.input_file:
         input_path = Path(args.input_file).resolve()
-        with input_path.open("r", encoding="utf-8") as fp:
-          stdin.write(fp.read())
+        with input_path.open("rb") as fp:
+          stdin.channel.sendall(fp.read())
 
-      stdin.flush()
       stdin.channel.shutdown_write()
 
       exit_status = stdout.channel.recv_exit_status()
-      sys.stdout.write(stdout.read().decode("utf-8", errors="replace"))
-      sys.stderr.write(stderr.read().decode("utf-8", errors="replace"))
+      sys.stdout.buffer.write(stdout.read())
+      sys.stdout.flush()
+      sys.stderr.buffer.write(stderr.read())
+      sys.stderr.flush()
       return exit_status
     except Exception as exc:
       print(f"SSH command failed: {exc}", file=sys.stderr)
@@ -109,6 +110,4 @@ def load_private_key(private_key: str):
 
 
 if __name__ == "__main__":
-    import io
-
     raise SystemExit(main())
