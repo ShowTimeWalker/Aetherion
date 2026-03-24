@@ -30,20 +30,6 @@ onMounted(async () => {
         负责承载门户、展示游戏列表，并通过统一入口接入各个独立小游戏目录。
       </p>
 
-      <div class="hero__actions">
-        <a href="#games">查看游戏</a>
-        <span>域名上线后可直接挂在 noah-bot.cloud</span>
-      </div>
-    </div>
-
-    <div class="hero__panel">
-      <p>当前定位</p>
-      <ul>
-        <li>Vite + Vue 3 + TypeScript 门户</li>
-        <li>`games/` 独立静态游戏目录</li>
-        <li>构建前自动扫描并生成清单</li>
-        <li>适配 GitHub Actions 自动部署</li>
-      </ul>
     </div>
   </section>
 
