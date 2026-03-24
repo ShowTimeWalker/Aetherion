@@ -165,6 +165,14 @@ select {
   max-width: 10ch;
 }
 
+.hero__headline {
+  max-width: none;
+  white-space: nowrap;
+  color: #f6c38b;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  line-height: 1.18;
+}
+
 .hero__lead {
   max-width: 52ch;
   margin: 20px 0 0;
@@ -354,6 +362,10 @@ select {
 
   .hero h1 {
     max-width: none;
+  }
+
+  .hero__headline {
+    font-size: clamp(1.1rem, 4.1vw, 1.45rem);
   }
 
   .play-shell__frame iframe {
