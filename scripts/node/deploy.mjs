@@ -121,7 +121,8 @@ function assertSshSupport() {
 }
 
 function assertCommand(command, versionArgs) {
-  const result = spawnSync(resolveCommand(command), versionArgs, {
+  const invocation = getCommandInvocation(command, versionArgs);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: rootDir,
     encoding: "utf8",
     stdio: "ignore"
@@ -133,7 +134,8 @@ function assertCommand(command, versionArgs) {
 }
 
 function runCommand(command, commandArgs, options = {}) {
-  const result = spawnSync(resolveCommand(command), commandArgs, {
+  const invocation = getCommandInvocation(command, commandArgs);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: rootDir,
     encoding: "utf8",
     input: options.input,
@@ -185,18 +187,27 @@ function runRemoteDeploy(remoteCommand) {
   );
 }
 
-function resolveCommand(command) {
+function getCommandInvocation(command, commandArgs) {
   if (process.platform === "win32") {
-    if (command === "pnpm") {
-      return "pnpm.cmd";
+    if (command === "python") {
+      return {
+        command: "python.exe",
+        args: commandArgs
+      };
     }
 
-    if (command === "python") {
-      return "python.exe";
+    if (command === "pnpm") {
+      return {
+        command: "cmd.exe",
+        args: ["/d", "/s", "/c", "pnpm", ...commandArgs]
+      };
     }
   }
 
-  return command;
+  return {
+    command,
+    args: commandArgs
+  };
 }
 
 function logStep(message) {
