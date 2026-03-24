@@ -1,0 +1,32 @@
+version: '1.0'
+name: aetherion-prod-deploy
+displayName: Aetherion 生产部署
+
+triggers:
+  push:
+    branches:
+      precise:
+        - main
+
+stages:
+  - name: deploy
+    displayName: 部署到云服务器
+    strategy: naturally
+    trigger: auto
+    steps:
+      - step: shell@agent
+        name: run_server_deploy
+        displayName: 执行服务器部署脚本
+        # 替换为 Gitee Go 主机管理里绑定到当前仓库的主机组 ID。
+        hostGroupID: replace-with-your-host-group-id
+        script: |
+          set -Eeuo pipefail
+
+          export APP_DIR="/opt/aetherion"
+          export SITE_DIR="/var/www/aetherion"
+          export BRANCH="main"
+          export NGINX_SERVICE_NAME="nginx"
+          export RELOAD_NGINX="true"
+
+          cd "$APP_DIR"
+          bash scripts/server/deploy.sh
