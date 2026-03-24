@@ -59,22 +59,17 @@ jobs:
           chmod 644 "$HOME/.ssh/known_hosts"
 
       - name: Run Remote Deploy Script
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 2
-          max_attempts: 3
-          retry_wait_seconds: 10
-          retry_on: error
-          command: |
-            set -Eeuo pipefail
+        shell: bash
+        run: |
+          set -Eeuo pipefail
 
-            SERVER_PORT="${SERVER_PORT:-22}"
-            APP_DIR="${APP_DIR:-/opt/aetherion}"
-            SITE_DIR="${SITE_DIR:-/var/www/aetherion}"
-            DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
-            NGINX_SERVICE_NAME="${NGINX_SERVICE_NAME:-nginx}"
-            RELOAD_NGINX="${RELOAD_NGINX:-true}"
+          SERVER_PORT="${SERVER_PORT:-22}"
+          APP_DIR="${APP_DIR:-/opt/aetherion}"
+          SITE_DIR="${SITE_DIR:-/var/www/aetherion}"
+          DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+          NGINX_SERVICE_NAME="${NGINX_SERVICE_NAME:-nginx}"
+          RELOAD_NGINX="${RELOAD_NGINX:-true}"
 
-            ssh -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
-              "APP_DIR='$APP_DIR' SITE_DIR='$SITE_DIR' BRANCH='$DEPLOY_BRANCH' NGINX_SERVICE_NAME='$NGINX_SERVICE_NAME' RELOAD_NGINX='$RELOAD_NGINX' bash -s" \
-              < scripts/server/deploy.sh
+          ssh -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "APP_DIR='$APP_DIR' SITE_DIR='$SITE_DIR' BRANCH='$DEPLOY_BRANCH' NGINX_SERVICE_NAME='$NGINX_SERVICE_NAME' RELOAD_NGINX='$RELOAD_NGINX' bash -s" \
+            < scripts/server/deploy.sh
