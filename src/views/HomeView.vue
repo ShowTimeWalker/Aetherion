@@ -24,7 +24,7 @@ onMounted(async () => {
   <section class="hero" id="overview">
     <div class="hero__copy">
       <p class="hero__eyebrow">Portal / MVP</p>
-      <h1 class="hero__headline">辣鸡小游戏统一门户</h1>
+      <h1 class="hero__headline">辣鸡小游戏测试网站</h1>
       <p class="hero__lead">
         Aetherion
         负责承载门户、展示游戏列表，并通过统一入口接入各个独立小游戏目录。
