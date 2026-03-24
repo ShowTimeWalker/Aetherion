@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>跳一跳</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hero-card">
+        <div>
+          <p class="badge">Aetherion / 跳一跳</p>
+          <h1>跳一跳</h1>
+          <p class="tip">按住蓄力，松开跳跃。精准降落在平台上获得分数，蓄力时间决定跳跃距离。</p>
+        </div>
+
+        <div class="score-cluster" aria-label="分数面板">
+          <section class="score-panel">
+            <span>分数</span>
+            <strong id="score">0</strong>
+          </section>
+          <section class="score-panel">
+            <span>最佳</span>
+            <strong id="best-score">0</strong>
+          </section>
+        </div>
+      </header>
+
+      <section class="control-card">
+        <div>
+          <p class="badge badge--muted">状态</p>
+          <p id="status" class="status">准备开始，按住画布蓄力。</p>
+        </div>
+
+        <button id="restart" type="button">重新开始</button>
+      </section>
+
+      <section class="board-card">
+        <canvas
+          id="board"
+          width="480"
+          height="640"
+          aria-label="跳一跳游戏画布"
+        ></canvas>
+      </section>
+
+      <footer class="footer-card">
+        <p>操作：按住 `Space` / 鼠标 / 触屏蓄力，松开跳跃</p>
+        <p>规则：精准降落在平台上，掉落即结束。</p>
+      </footer>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
