@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>扫雷</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="title-bar">
+        <div>
+          <p class="badge">Aetherion / Minesweeper</p>
+          <h1>扫雷</h1>
+          <p class="tip">左键揭开，右键插旗；揭开全部非地雷格子即可获胜。</p>
+        </div>
+        <button id="restart" class="face-button" type="button" aria-label="重新开始">🙂</button>
+      </header>
+
+      <section class="panel game-panel" aria-label="扫雷游戏面板">
+        <div class="hud panel panel--inner">
+          <div class="counter" aria-label="剩余地雷数">
+            <span class="counter__label">地雷</span>
+            <strong id="mine-count">010</strong>
+          </div>
+          <div class="counter" aria-label="游戏计时器">
+            <span class="counter__label">时间</span>
+            <strong id="timer">000</strong>
+          </div>
+        </div>
+
+        <div class="board-frame panel panel--inner">
+          <div id="board" class="board" role="grid" aria-label="9x9 扫雷棋盘"></div>
+        </div>
+
+        <footer class="status-bar panel panel--inner">
+          <p id="status">点击任意格子开始，首击必定安全。</p>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>

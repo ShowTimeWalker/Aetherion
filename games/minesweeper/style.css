@@ -1,0 +1,279 @@
+:root {
+  --bg: #008080;
+  --panel: #c0c0c0;
+  --light: #ffffff;
+  --mid-light: #dfdfdf;
+  --mid-dark: #808080;
+  --dark: #404040;
+  --deep: #1d1d1d;
+  --digit: #ff3b30;
+  --cell-size: clamp(32px, 8vw, 46px);
+
+  font-family: "Verdana", "Microsoft YaHei UI", sans-serif;
+  color: #111;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.2), transparent 30%),
+    linear-gradient(180deg, #0d7a7a 0%, var(--bg) 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.game-shell {
+  width: min(100%, 560px);
+  display: grid;
+  gap: 16px;
+}
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #f7f7f7;
+}
+
+.badge {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.3rem);
+}
+
+.tip {
+  margin: 8px 0 0;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.panel {
+  background: var(--panel);
+  border-top: 3px solid var(--light);
+  border-left: 3px solid var(--light);
+  border-right: 3px solid var(--dark);
+  border-bottom: 3px solid var(--dark);
+}
+
+.panel--inner {
+  border-top-color: var(--mid-dark);
+  border-left-color: var(--mid-dark);
+  border-right-color: var(--light);
+  border-bottom-color: var(--light);
+}
+
+.game-panel {
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.hud {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.counter {
+  min-width: 110px;
+}
+
+.counter__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.counter strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 6px 10px;
+  background: #121212;
+  color: var(--digit);
+  font-size: 2rem;
+  line-height: 1;
+  font-family: "Courier New", monospace;
+  border-top: 3px solid var(--mid-dark);
+  border-left: 3px solid var(--mid-dark);
+  border-right: 3px solid var(--light);
+  border-bottom: 3px solid var(--light);
+}
+
+.face-button {
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-top: 3px solid var(--light);
+  border-left: 3px solid var(--light);
+  border-right: 3px solid var(--dark);
+  border-bottom: 3px solid var(--dark);
+  background: #e1e1e1;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.face-button:active {
+  border-top-color: var(--dark);
+  border-left-color: var(--dark);
+  border-right-color: var(--light);
+  border-bottom-color: var(--light);
+}
+
+.board-frame {
+  padding: 12px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.cell {
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: none;
+  background: #c6c6c6;
+  border-top: 3px solid var(--light);
+  border-left: 3px solid var(--light);
+  border-right: 3px solid var(--dark);
+  border-bottom: 3px solid var(--dark);
+  display: grid;
+  place-items: center;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  font-weight: 700;
+  color: transparent;
+  cursor: pointer;
+}
+
+.cell--open {
+  background: #d0d0d0;
+  border: 1px solid var(--mid-dark);
+  cursor: default;
+}
+
+.cell--flagged,
+.cell--mine,
+.cell--exploded {
+  color: #111;
+}
+
+.cell--open.cell--empty {
+  color: transparent;
+}
+
+.cell--mine,
+.cell--exploded {
+  background: #d0d0d0;
+}
+
+.cell--exploded {
+  background: #ff6f61;
+}
+
+.cell--wrong-flag {
+  background: #ffd8d2;
+  color: #a40000;
+}
+
+.number-1 {
+  color: #1d4ed8;
+}
+
+.number-2 {
+  color: #15803d;
+}
+
+.number-3 {
+  color: #dc2626;
+}
+
+.number-4 {
+  color: #1e3a8a;
+}
+
+.number-5 {
+  color: #7c2d12;
+}
+
+.number-6 {
+  color: #0f766e;
+}
+
+.number-7 {
+  color: #111827;
+}
+
+.number-8 {
+  color: #6b7280;
+}
+
+.status-bar {
+  padding: 12px 14px;
+}
+
+.status-bar p {
+  margin: 0;
+  min-height: 1.5em;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 14px;
+  }
+
+  .game-shell {
+    gap: 12px;
+  }
+
+  .title-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hud {
+    flex-wrap: wrap;
+  }
+
+  .counter {
+    flex: 1 1 120px;
+  }
+
+  .face-button {
+    align-self: flex-start;
+  }
+}
