@@ -40,7 +40,7 @@
 本地修改代码
 -> 本地执行 pnpm build 自检
 -> git add / commit
--> 执行 pnpm deploy
+-> 执行 pnpm run deploy
 -> 本地脚本检查分支和工作区
 -> git push origin deploy_gitee
 -> SSH 登录腾讯云服务器
@@ -61,7 +61,7 @@
 flowchart TD
     A[本地开发代码] --> B[本地自测 pnpm build]
     B --> C[git add / commit]
-    C --> D[执行发布命令 pnpm deploy]
+    C --> D[执行发布命令 pnpm run deploy]
     D --> E[本地脚本检查当前分支是否为 deploy_gitee]
     E --> F[本地脚本检查工作区是否干净]
     F --> G[git push origin deploy_gitee]
@@ -96,7 +96,7 @@ flowchart TD
     A[修改代码] --> B[在 deploy_gitee 分支开发]
     B --> C[本地执行 pnpm build]
     C --> D[git add / commit]
-    D --> E[执行 pnpm deploy]
+    D --> E[执行 pnpm run deploy]
     E --> F[脚本自动 push 到 Gitee]
     F --> G[脚本自动 SSH 到服务器触发部署]
 ```
@@ -145,7 +145,7 @@ sequenceDiagram
     Dev->>Local: 修改代码
     Dev->>Local: pnpm build 自检
     Dev->>Local: git add / commit
-    Dev->>Local: pnpm deploy
+    Dev->>Local: pnpm run deploy
     Local->>Local: 检查分支=deploy_gitee
     Local->>Local: 检查工作区干净
     Local->>Gitee: git push origin deploy_gitee
@@ -178,7 +178,7 @@ sequenceDiagram
 
 ## 本地发布脚本默认参数
 
-`pnpm deploy` 默认使用以下配置：
+`pnpm run deploy` 默认使用以下配置：
 
 - `DEPLOY_REMOTE=origin`
 - `DEPLOY_BRANCH=deploy_gitee`
@@ -200,7 +200,7 @@ sequenceDiagram
 pnpm build
 git add .
 git commit -m "your message"
-pnpm deploy
+pnpm run deploy
 ```
 
 ---

@@ -68,8 +68,8 @@ function printHelp() {
   console.log(`Aetherion 本地发布脚本
 
 用法:
-  pnpm deploy
-  pnpm deploy -- --skip-build
+  pnpm run deploy
+  pnpm run deploy -- --skip-build
 
 默认行为:
   1. 检查当前分支是否为 deploy_gitee
