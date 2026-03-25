@@ -64,8 +64,8 @@ function collectGames() {
 
 function syncGames() {
   mkdirSync(publicDir, { recursive: true });
-  rmSync(publicGamesDir, { recursive: true, force: true });
   mkdirSync(publicGamesDir, { recursive: true });
+  clearDirectory(publicGamesDir);
 
   if (!existsSync(gamesDir)) {
     return;
@@ -81,6 +81,21 @@ function syncGames() {
     cpSync(sourcePath, join(publicGamesDir, entryName), {
       recursive: true,
       force: true
+    });
+  }
+}
+
+function clearDirectory(directoryPath) {
+  if (!existsSync(directoryPath)) {
+    return;
+  }
+
+  for (const entryName of readdirSync(directoryPath)) {
+    rmSync(join(directoryPath, entryName), {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 50
     });
   }
 }

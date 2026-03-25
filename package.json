@@ -6,11 +6,11 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "predev": "node scripts/node/build-games.mjs",
-    "dev": "vite",
+    "dev": "node scripts/node/run-pnpm-bin.mjs vite",
     "prebuild": "node scripts/node/build-games.mjs",
     "build": "node scripts/node/run-pnpm-bin.mjs vue-tsc --noEmit && node scripts/node/run-pnpm-bin.mjs vite build",
     "deploy": "node scripts/node/deploy.mjs",
-    "preview": "vite preview"
+    "preview": "node scripts/node/run-pnpm-bin.mjs vite preview"
   },
   "dependencies": {
     "vue": "^3.5.13",

@@ -155,6 +155,10 @@ function assertCommand(command, versionArgs) {
     stdio: "ignore"
   });
 
+  if (result.status === 0) {
+    return;
+  }
+
   if (result.error || result.status !== 0) {
     fail(`本机缺少可执行命令: ${command}`);
   }
@@ -169,7 +173,7 @@ function runCommand(command, commandArgs, options = {}) {
     stdio: options.captureStdout ? ["pipe", "pipe", "inherit"] : ["pipe", "inherit", "inherit"]
   });
 
-  if (result.error) {
+  if (result.error && result.status == null) {
     fail(`执行失败: ${command} ${commandArgs.join(" ")}\n${result.error.message}`);
   }
 
