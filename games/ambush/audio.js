@@ -7,11 +7,7 @@ const AudioSystem = (() => {
   let musicGain = null;
   let sfxGain = null;
   let musicPlaying = false;
-  let musicNodes = [];
   let ninjaHasShouted = false;
-  let arrowSfxPool = 0;
-  let bladeSfxPool = 0;
-  const MAX_CONCURRENT_SFX = 4;
 
   function init() {
     if (ctx) return;
@@ -23,7 +19,7 @@ const AudioSystem = (() => {
       masterGain.connect(ctx.destination);
 
       musicGain = ctx.createGain();
-      musicGain.gain.value = 1.0;
+      musicGain.gain.value = 0.8;
       musicGain.connect(masterGain);
 
       sfxGain = ctx.createGain();
@@ -38,195 +34,316 @@ const AudioSystem = (() => {
     if (ctx && ctx.state === 'suspended') ctx.resume();
   }
 
-  // ===== Pentatonic scale: C4 D4 E4 G4 A4 (宫商角徵羽) =====
-  const PENTA = [261.63, 293.66, 329.63, 392.00, 440.00];
-  const PENTA_HI = [523.25, 587.33, 659.25, 783.99, 880.00];
-  const PENTA_LO = [130.81, 146.83, 164.81, 196.00, 220.00];
+  // ===== 五声音阶 (宫商角徵羽) =====
+  // Extended range for more musical variety
+  const NOTES = {
+    C3: 130.81, D3: 146.83, E3: 164.81, G3: 196.00, A3: 220.00,
+    C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00,
+    C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
+    C6: 1046.50, D6: 1174.66,
+  };
 
-  // ===== Flute-like tone (箫/笛子) =====
-  function playFlute(freq, startTime, duration, vol) {
+  // ===== 箫 (Xiao) - low, breathy, melancholy bamboo flute =====
+  function playXiao(freq, time, dur, vol) {
     if (!ctx) return;
+    // Main tone - sine for pure bamboo flute
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
     osc.type = 'sine';
     osc.frequency.value = freq;
 
-    // Add slight vibrato for bamboo flute feel
-    const vibrato = ctx.createOscillator();
-    const vibratoGain = ctx.createGain();
-    vibrato.frequency.value = 5 + Math.random() * 2;
-    vibratoGain.gain.value = freq * 0.008;
-    vibrato.connect(vibratoGain);
-    vibratoGain.connect(osc.frequency);
-    vibrato.start(startTime);
-    vibrato.stop(startTime + duration);
+    // Slight vibrato (natural breathing)
+    const vib = ctx.createOscillator();
+    const vibG = ctx.createGain();
+    vib.frequency.value = 4.5;
+    vibG.gain.value = freq * 0.006;
+    vib.connect(vibG);
+    vibG.connect(osc.frequency);
 
-    // Breath noise
+    // Breath noise - crucial for xiao character
+    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * dur * 1.1, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
     const noise = ctx.createBufferSource();
-    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-    const noiseData = noiseBuf.getChannelData(0);
-    for (let i = 0; i < noiseData.length; i++) noiseData[i] = (Math.random() * 2 - 1) * 0.3;
     noise.buffer = noiseBuf;
-    const noiseGain = ctx.createGain();
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.value = freq * 2;
-    noiseFilter.Q.value = 3;
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.gain.value = vol * 0.04;
+    const nGain = ctx.createGain();
+    const nFilter = ctx.createBiquadFilter();
+    nFilter.type = 'bandpass';
+    nFilter.frequency.value = freq * 1.5;
+    nFilter.Q.value = 2;
+    noise.connect(nFilter);
+    nFilter.connect(nGain);
+    nGain.gain.value = vol * 0.08;
 
-    filter.type = 'lowpass';
-    filter.frequency.value = freq * 4;
-    filter.Q.value = 0.7;
+    // Low-pass for warm tone
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.value = freq * 3;
+    lpf.Q.value = 0.5;
 
-    osc.connect(filter);
-    filter.connect(gain);
+    const gain = ctx.createGain();
+    osc.connect(lpf);
+    lpf.connect(gain);
     gain.connect(musicGain);
+    nGain.connect(musicGain);
 
-    noiseGain.connect(musicGain);
+    // Xiao has slow attack (breath), sustain, slow release
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol * 0.7, time + 0.12);
+    gain.gain.setValueAtTime(vol * 0.7, time + dur * 0.6);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
 
-    gain.gain.setValueAtTime(0, startTime);
-    gain.gain.linearRampToValueAtTime(vol, startTime + 0.05);
-    gain.gain.setValueAtTime(vol, startTime + duration * 0.7);
-    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-    osc.start(startTime);
-    osc.stop(startTime + duration);
-    noise.start(startTime);
-    noise.stop(startTime + duration);
-
-    musicNodes.push(osc, vibrato, noise);
+    vib.start(time);
+    vib.stop(time + dur);
+    osc.start(time);
+    osc.stop(time + dur);
+    noise.start(time);
+    noise.stop(time + dur);
   }
 
-  // ===== Guzheng-like pluck (古筝) =====
-  function playGuzheng(freq, startTime, duration, vol) {
+  // ===== 笛子 (Dizi) - bright, sharp bamboo flute =====
+  function playDizi(freq, time, dur, vol) {
     if (!ctx) return;
-    const osc = ctx.createOscillator();
+    // Brighter tone with harmonics
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.value = freq;
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.value = freq * 2; // 2nd harmonic
+    const g2 = ctx.createGain();
+    g2.gain.value = 0.15;
+
+    // Vibrato - slightly faster than xiao
+    const vib = ctx.createOscillator();
+    const vibG = ctx.createGain();
+    vib.frequency.value = 6;
+    vibG.gain.value = freq * 0.01;
+    vib.connect(vibG);
+    vibG.connect(osc1.frequency);
+
+    // Breath noise (lighter than xiao)
+    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * dur * 1.1, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    const nGain = ctx.createGain();
+    const nFilter = ctx.createBiquadFilter();
+    nFilter.type = 'highpass';
+    nFilter.frequency.value = 2000;
+    noise.connect(nFilter);
+    nFilter.connect(nGain);
+    nGain.gain.value = vol * 0.03;
+
+    // Bright high-pass
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'lowpass';
+    hpf.frequency.value = freq * 6;
+    hpf.frequency.Q = 1;
+
     const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    osc.type = 'triangle';
-    osc.frequency.value = freq;
-
-    filter.type = 'lowpass';
-    filter.frequency.value = freq * 6;
-    filter.Q.value = 1;
-
-    osc.connect(filter);
-    filter.connect(gain);
+    osc1.connect(hpf);
+    osc2.connect(g2);
+    g2.connect(hpf);
+    hpf.connect(gain);
     gain.connect(musicGain);
+    nGain.connect(musicGain);
 
-    // Sharp attack, quick decay (plucked string)
-    gain.gain.setValueAtTime(vol * 0.5, startTime);
-    gain.gain.exponentialRampToValueAtTime(vol * 0.15, startTime + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    // Quick attack, clear sustain
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol * 0.55, time + 0.04);
+    gain.gain.setValueAtTime(vol * 0.55, time + dur * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
 
-    osc.start(startTime);
-    osc.stop(startTime + duration);
-    musicNodes.push(osc);
+    vib.start(time);
+    vib.stop(time + dur);
+    osc1.start(time);
+    osc1.stop(time + dur);
+    osc2.start(time);
+    osc2.stop(time + dur);
+    noise.start(time);
+    noise.stop(time + dur);
   }
 
-  // ===== Percussion hit (鼓点) =====
-  function playDrum(startTime, vol) {
+  // ===== 琵琶 (Pipa) - plucked lute, sharp attack, fast decay =====
+  function playPipa(freq, time, dur, vol) {
+    if (!ctx) return;
+    // Use multiple harmonics for pipa timbre
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'triangle';
+    osc1.frequency.value = freq;
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.value = freq * 3;
+    const g2 = ctx.createGain();
+    g2.gain.value = 0.08;
+
+    // Very sharp attack, fast decay (characteristic pipa)
+    const gain = ctx.createGain();
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.setValueAtTime(freq * 8, time);
+    lpf.frequency.exponentialRampToValueAtTime(freq * 2, time + 0.15);
+
+    osc1.connect(lpf);
+    osc2.connect(g2);
+    g2.connect(lpf);
+    lpf.connect(gain);
+    gain.connect(musicGain);
+
+    gain.gain.setValueAtTime(vol * 0.6, time);
+    gain.gain.exponentialRampToValueAtTime(vol * 0.2, time + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc1.start(time);
+    osc1.stop(time + dur);
+    osc2.start(time);
+    osc2.stop(time + dur);
+  }
+
+  // ===== 大鼓 (War Drum) =====
+  function playDrum(time, vol) {
     if (!ctx) return;
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, startTime);
-    osc.frequency.exponentialRampToValueAtTime(40, startTime + 0.15);
-    gain.gain.setValueAtTime(vol * 0.6, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+    osc.frequency.setValueAtTime(120, time);
+    osc.frequency.exponentialRampToValueAtTime(35, time + 0.2);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.7, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
     osc.connect(gain);
     gain.connect(musicGain);
-    osc.start(startTime);
-    osc.stop(startTime + 0.2);
+    osc.start(time);
+    osc.stop(time + 0.3);
 
-    // Noise hit
-    const noise = ctx.createBufferSource();
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
-    noise.buffer = buf;
+    // Impact noise
+    const nBuf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+    const nd = nBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
+    const ns = ctx.createBufferSource();
+    ns.buffer = nBuf;
     const ng = ctx.createGain();
-    ng.gain.setValueAtTime(vol * 0.15, startTime);
-    ng.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
-    const hf = ctx.createBiquadFilter();
-    hf.type = 'highpass';
-    hf.frequency.value = 1000;
-    noise.connect(hf);
-    hf.connect(ng);
+    ng.gain.setValueAtTime(vol * 0.2, time);
+    ng.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+    ns.connect(ng);
     ng.connect(musicGain);
-    noise.start(startTime);
-    noise.stop(startTime + 0.1);
-
-    musicNodes.push(osc, noise);
+    ns.start(time);
+    ns.stop(time + 0.08);
   }
 
-  // ===== Background Music Loop =====
-  let musicInterval = null;
+  // ===== 背景音乐 - 长旋律循环 =====
+  let musicTimeout = null;
 
   function startMusic() {
     if (musicPlaying || !ctx) return;
     if (ctx.state === 'suspended') {
-      ctx.resume().then(() => { musicPlaying = true; playMusicPhrase(); });
+      ctx.resume().then(() => { musicPlaying = true; scheduleMusic(); });
     } else {
       musicPlaying = true;
-      playMusicPhrase();
+      scheduleMusic();
     }
   }
 
-  function playMusicPhrase() {
+  function scheduleMusic() {
     if (!musicPlaying || !ctx) return;
+    const now = ctx.currentTime + 0.1;
+    playMusicLoop(now);
+    // 32-beat loop at ~140bpm ≈ 13.7 seconds per cycle
+    const loopDur = (60 / 140) * 32;
+    if (musicTimeout) clearTimeout(musicTimeout);
+    musicTimeout = setTimeout(scheduleMusic, loopDur * 1000 - 50);
+  }
 
-    const now = ctx.currentTime;
-    const bpm = 168;
-    const beatDur = 60 / bpm;
-    const noteDur = beatDur * 0.8;
-    const vol = 0.5;
+  function playMusicLoop(t) {
+    const b = 60 / 140; // beat duration (~0.43s)
+    const v = 0.45;
 
-    // Simple repeating pentatonic melody loop
-    const melody = [0, 2, 4, 3, 1, 0, 4, 2, 3, 1, 4, 0, 2, 4, 1, 3];
-    for (let i = 0; i < melody.length; i++) {
-      const scale = i % 3 === 0 ? PENTA_LO : (i % 3 === 1 ? PENTA : PENTA_HI);
-      const f = scale[melody[i]];
-      playFlute(f, now + i * beatDur, noteDur * 1.2, vol);
-      if (i % 2 === 0) playGuzheng(scale[(melody[i] + 2) % 5], now + i * beatDur + beatDur * 0.5, noteDur * 0.5, vol * 0.5);
-      if (i % 4 === 0) playDrum(now + i * beatDur, vol * 0.4);
+    // ---- Section A: 箫 melody + pipa rhythm (beats 0-15) ----
+    // 箫主旋律 - 悠扬的开场
+    const xiaoMelA = [
+      [NOTES.G4, 2], [NOTES.A4, 1], [NOTES.G4, 1],
+      [NOTES.E4, 2], [NOTES.D4, 2],
+      [NOTES.C4, 2], [NOTES.D4, 1], [NOTES.E4, 1],
+      [NOTES.G4, 2], [NOTES.A4, 2],
+      [NOTES.G4, 1], [NOTES.E4, 1], [NOTES.D4, 1], [NOTES.C4, 1],
+      [NOTES.D4, 2], [NOTES.E4, 2],
+    ];
+    let pos = 0;
+    for (const [freq, beats] of xiaoMelA) {
+      playXiao(freq, t + pos * b, beats * b * 0.9, v * 0.8);
+      pos += beats;
     }
 
-    // Schedule next loop
-    const phraseDuration = melody.length * beatDur * 1000;
-    if (musicInterval) clearTimeout(musicInterval);
-    musicInterval = setTimeout(() => {
-      playMusicPhrase();
-    }, phraseDuration - 100);
+    // 琵琶伴奏 - 急促的拨弦
+    const pipaA = [
+      0, 2, 4, 6, 8, 10, 12, 14
+    ];
+    for (const beat of pipaA) {
+      playPipa(NOTES.G3, t + beat * b, b * 0.3, v * 0.35);
+      playPipa(NOTES.D4, t + (beat + 0.5) * b, b * 0.2, v * 0.25);
+    }
+
+    // 鼓点 - 强拍
+    for (const beat of [0, 4, 8, 12]) {
+      playDrum(t + beat * b, v * 0.5);
+    }
+    for (const beat of [2, 6, 10, 14]) {
+      playDrum(t + beat * b, v * 0.25);
+    }
+
+    // ---- Section B: 笛子急促旋律 + 琵琶轮指 (beats 16-31) ----
+    // 笛子 - 快速紧张的旋律
+    const diziMelB = [
+      [NOTES.A4, 0.5], [NOTES.C5, 0.5], [NOTES.D5, 0.5], [NOTES.C5, 0.5],
+      [NOTES.A4, 1], [NOTES.G4, 1],
+      [NOTES.E4, 0.5], [NOTES.G4, 0.5], [NOTES.A4, 0.5], [NOTES.G4, 0.5],
+      [NOTES.E4, 1], [NOTES.D4, 1],
+      [NOTES.C4, 0.5], [NOTES.D4, 0.5], [NOTES.E4, 0.5], [NOTES.G4, 0.5],
+      [NOTES.A4, 1], [NOTES.C5, 1],
+      [NOTES.D5, 0.5], [NOTES.C5, 0.5], [NOTES.A4, 0.5], [NOTES.G4, 0.5],
+      [NOTES.A4, 1], [NOTES.G4, 1],
+    ];
+    pos = 16;
+    for (const [freq, beats] of diziMelB) {
+      playDizi(freq, t + pos * b, beats * b * 0.85, v * 0.7);
+      pos += beats;
+    }
+
+    // 琵琶快速轮指伴奏
+    for (let i = 16; i < 32; i++) {
+      const noteIdx = i % 5;
+      const scale = i < 24 ? [NOTES.C4, NOTES.D4, NOTES.E4, NOTES.G4, NOTES.A4] : [NOTES.G4, NOTES.A4, NOTES.C5, NOTES.D5, NOTES.E5];
+      playPipa(scale[noteIdx], t + i * b, b * 0.25, v * 0.2);
+    }
+
+    // 鼓点 - 更密集
+    for (let i = 16; i < 32; i += 2) {
+      playDrum(t + i * b, v * 0.4);
+    }
+    for (let i = 17; i < 32; i += 2) {
+      playDrum(t + i * b, v * 0.2);
+    }
+
+    // 高音笛子点缀 (装饰音)
+    playDizi(NOTES.G5, t + 24 * b, b * 0.3, v * 0.3);
+    playDizi(NOTES.A5, t + 28 * b, b * 0.3, v * 0.3);
   }
 
   function stopMusic() {
     musicPlaying = false;
-    if (musicInterval) clearTimeout(musicInterval);
-    musicInterval = null;
-    for (const n of musicNodes) {
-      try { n.disconnect(); } catch {}
-    }
-    musicNodes = [];
+    if (musicTimeout) clearTimeout(musicTimeout);
+    musicTimeout = null;
   }
 
   // ===== Arrow SFX (咻) =====
   function playArrowSfx() {
     if (!ctx) return;
     const now = ctx.currentTime;
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(2000, now);
     osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
-
-    // Noise swoosh
     const noise = ctx.createBufferSource();
     const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -243,44 +360,34 @@ const AudioSystem = (() => {
     ng.gain.setValueAtTime(0.15, now);
     ng.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     ng.connect(sfxGain);
-
     gain.gain.setValueAtTime(0.08, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     osc.connect(gain);
     gain.connect(sfxGain);
-
     osc.start(now);
     osc.stop(now + 0.15);
     noise.start(now);
     noise.stop(now + 0.15);
-
-    setTimeout(() => {}, 60);
   }
 
   // ===== Blade/Dagger SFX (嗖嗖 - metallic) =====
   function playBladeSfx() {
     if (!ctx) return;
-    bladeSfxPool++;
     const now = ctx.currentTime;
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(1200, now);
     osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 2000;
     filter.Q.value = 5;
-
     osc.connect(filter);
     filter.connect(gain);
     gain.gain.setValueAtTime(0.06, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     gain.connect(sfxGain);
-
-    // Metallic shimmer
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'square';
@@ -289,21 +396,16 @@ const AudioSystem = (() => {
     gain2.gain.setValueAtTime(0.02, now);
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     gain2.connect(sfxGain);
-
     osc.start(now);
     osc.stop(now + 0.18);
     osc2.start(now);
     osc2.stop(now + 0.12);
-
-    setTimeout(() => bladeSfxPool--, 80);
   }
 
   // ===== Smoke Bomb SFX (嘭) =====
   function playSmokeBombSfx() {
     if (!ctx) return;
     const now = ctx.currentTime;
-
-    // Low boom
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -315,8 +417,6 @@ const AudioSystem = (() => {
     gain.connect(sfxGain);
     osc.start(now);
     osc.stop(now + 0.5);
-
-    // Noise burst
     const noise = ctx.createBufferSource();
     const buf = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -334,8 +434,6 @@ const AudioSystem = (() => {
     ng.connect(sfxGain);
     noise.start(now);
     noise.stop(now + 0.5);
-
-    // Reverb-like echo
     const echo = ctx.createOscillator();
     const eg = ctx.createGain();
     echo.type = 'sine';
@@ -371,31 +469,23 @@ const AudioSystem = (() => {
   function playDeathScream() {
     if (!ctx) return;
     const now = ctx.currentTime;
-
-    // Deep hoarse male scream "啊！~~~~"
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
-
     osc1.type = 'sawtooth';
     osc1.frequency.setValueAtTime(150, now);
     osc1.frequency.linearRampToValueAtTime(280, now + 0.08);
     osc1.frequency.linearRampToValueAtTime(120, now + 2.0);
     osc1.frequency.exponentialRampToValueAtTime(60, now + 2.5);
-
     osc2.type = 'square';
     osc2.frequency.setValueAtTime(155, now);
     osc2.frequency.linearRampToValueAtTime(285, now + 0.08);
     osc2.frequency.linearRampToValueAtTime(125, now + 2.0);
     osc2.frequency.exponentialRampToValueAtTime(55, now + 2.5);
-
-    // Low-pass for deep raspy tone
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 600;
     filter.Q.value = 0.8;
-
-    // Distortion for hoarse quality
     const distortion = ctx.createWaveShaper();
     const curve = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
@@ -403,24 +493,19 @@ const AudioSystem = (() => {
       curve[i] = (Math.PI + 30) * x / (Math.PI + 30 * Math.abs(x));
     }
     distortion.curve = curve;
-
     const mix = ctx.createGain();
     mix.gain.value = 0.6;
-
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(distortion);
     distortion.connect(mix);
     mix.connect(gain);
-
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.7, now + 0.04);
     gain.gain.setValueAtTime(0.7, now + 0.5);
     gain.gain.linearRampToValueAtTime(0.45, now + 1.5);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
-
     gain.connect(sfxGain);
-
     osc1.start(now);
     osc1.stop(now + 2.8);
     osc2.start(now);
