@@ -231,7 +231,7 @@ const AudioSystem = (() => {
     ns.stop(time + 0.08);
   }
 
-  // ===== 背景音乐 - 长旋律循环 =====
+  // ===== 背景音乐 - 战斗曲目 =====
   let musicTimeout = null;
 
   function startMusic() {
@@ -247,86 +247,80 @@ const AudioSystem = (() => {
   function scheduleMusic() {
     if (!musicPlaying || !ctx) return;
     const now = ctx.currentTime + 0.1;
-    playMusicLoop(now);
-    // 32-beat loop at ~140bpm ≈ 13.7 seconds per cycle
-    const loopDur = (60 / 140) * 32;
+    playBattleMusic(now);
+    // ~15 seconds per cycle, 48 beats at 192bpm
+    const loopDur = (60 / 192) * 48;
     if (musicTimeout) clearTimeout(musicTimeout);
     musicTimeout = setTimeout(scheduleMusic, loopDur * 1000 - 50);
   }
 
-  function playMusicLoop(t) {
-    const b = 60 / 140; // beat duration (~0.43s)
-    const v = 0.45;
+  function playBattleMusic(t) {
+    const b = 60 / 192; // ~0.312s per beat, very fast
+    const v = 0.55;
 
-    // ---- Section A: 箫 melody + pipa rhythm (beats 0-15) ----
-    // 箫主旋律 - 悠扬的开场
-    const xiaoMelA = [
-      [NOTES.G4, 2], [NOTES.A4, 1], [NOTES.G4, 1],
-      [NOTES.E4, 2], [NOTES.D4, 2],
-      [NOTES.C4, 2], [NOTES.D4, 1], [NOTES.E4, 1],
-      [NOTES.G4, 2], [NOTES.A4, 2],
-      [NOTES.G4, 1], [NOTES.E4, 1], [NOTES.D4, 1], [NOTES.C4, 1],
-      [NOTES.D4, 2], [NOTES.E4, 2],
+    // ===== 琵琶急促轮指 - 全程持续 =====
+    // 模拟《十面埋伏》开篇的密集轮指
+    const pipaRun1 = [NOTES.A3, NOTES.C4, NOTES.E4, NOTES.G4, NOTES.A4, NOTES.G4, NOTES.E4, NOTES.C4];
+    const pipaRun2 = [NOTES.G3, NOTES.A3, NOTES.C4, NOTES.D4, NOTES.E4, NOTES.D4, NOTES.C4, NOTES.A3];
+    const pipaRun3 = [NOTES.E3, NOTES.G3, NOTES.A3, NOTES.C4, NOTES.E4, NOTES.G4, NOTES.A4, NOTES.C5];
+    const pipaRun4 = [NOTES.A3, NOTES.C4, NOTES.E4, NOTES.A4, NOTES.E4, NOTES.C4, NOTES.A3, NOTES.E3];
+
+    // 16th note pipa runs (4 notes per beat)
+    for (let beat = 0; beat < 48; beat++) {
+      const run = beat < 12 ? pipaRun1 : beat < 24 ? pipaRun2 : beat < 36 ? pipaRun3 : pipaRun4;
+      const noteInBeat = beat % run.length;
+      // 4 pipa notes per beat (16th notes)
+      for (let sub = 0; sub < 4; sub++) {
+        const idx = (noteInBeat + sub) % run.length;
+        playPipa(run[idx], t + beat * b + sub * b * 0.25, b * 0.2, v * 0.3);
+      }
+    }
+
+    // ===== 箫 - 肃杀低音长音 =====
+    // 不吹旋律，而是持续低音营造压迫感，偶尔一个音符变化
+    const xiaoNotes = [
+      [NOTES.C3, 6], [NOTES.G3, 4], [NOTES.E3, 6],
+      [NOTES.A3, 4], [NOTES.G3, 6], [NOTES.D3, 6],
+      [NOTES.E3, 4], [NOTES.C3, 6], [NOTES.G3, 6],
     ];
     let pos = 0;
-    for (const [freq, beats] of xiaoMelA) {
-      playXiao(freq, t + pos * b, beats * b * 0.9, v * 0.8);
-      pos += beats;
+    for (const [freq, beats] of xiaoNotes) {
+      if (pos < 48) {
+        playXiao(freq, t + pos * b, beats * b * 0.95, v * 0.5);
+        pos += beats;
+      }
     }
 
-    // 琵琶伴奏 - 急促的拨弦
-    const pipaA = [
-      0, 2, 4, 6, 8, 10, 12, 14
+    // ===== 笛子 - 尖锐战斗音 =====
+    // 不连续吹，偶尔插一个高音，像战斗中的号角
+    const diziAccents = [
+      [NOTES.A5, 20.5, 0.5],
+      [NOTES.G5, 22, 0.5],
+      [NOTES.A5, 34.5, 0.5],
+      [NOTES.C6, 36, 0.5],
+      [NOTES.A5, 44, 0.5],
+      [NOTES.G5, 46, 0.5],
     ];
-    for (const beat of pipaA) {
-      playPipa(NOTES.G3, t + beat * b, b * 0.3, v * 0.35);
-      playPipa(NOTES.D4, t + (beat + 0.5) * b, b * 0.2, v * 0.25);
+    for (const [freq, beat, dur] of diziAccents) {
+      playDizi(freq, t + beat * b, dur * b, v * 0.4);
     }
 
-    // 鼓点 - 强拍
-    for (const beat of [0, 4, 8, 12]) {
-      playDrum(t + beat * b, v * 0.5);
-    }
-    for (const beat of [2, 6, 10, 14]) {
-      playDrum(t + beat * b, v * 0.25);
-    }
-
-    // ---- Section B: 笛子急促旋律 + 琵琶轮指 (beats 16-31) ----
-    // 笛子 - 快速紧张的旋律
-    const diziMelB = [
-      [NOTES.A4, 0.5], [NOTES.C5, 0.5], [NOTES.D5, 0.5], [NOTES.C5, 0.5],
-      [NOTES.A4, 1], [NOTES.G4, 1],
-      [NOTES.E4, 0.5], [NOTES.G4, 0.5], [NOTES.A4, 0.5], [NOTES.G4, 0.5],
-      [NOTES.E4, 1], [NOTES.D4, 1],
-      [NOTES.C4, 0.5], [NOTES.D4, 0.5], [NOTES.E4, 0.5], [NOTES.G4, 0.5],
-      [NOTES.A4, 1], [NOTES.C5, 1],
-      [NOTES.D5, 0.5], [NOTES.C5, 0.5], [NOTES.A4, 0.5], [NOTES.G4, 0.5],
-      [NOTES.A4, 1], [NOTES.G4, 1],
-    ];
-    pos = 16;
-    for (const [freq, beats] of diziMelB) {
-      playDizi(freq, t + pos * b, beats * b * 0.85, v * 0.7);
-      pos += beats;
+    // ===== 鼓点 - 密集战斗鼓 =====
+    // 强拍重击 + 每拍都有鼓
+    for (let i = 0; i < 48; i++) {
+      if (i % 4 === 0) {
+        playDrum(t + i * b, v * 0.7); // 大鼓重击
+      } else if (i % 2 === 0) {
+        playDrum(t + i * b, v * 0.35); // 中鼓
+      } else {
+        playDrum(t + i * b, v * 0.15); // 小鼓轻击
+      }
     }
 
-    // 琵琶快速轮指伴奏
-    for (let i = 16; i < 32; i++) {
-      const noteIdx = i % 5;
-      const scale = i < 24 ? [NOTES.C4, NOTES.D4, NOTES.E4, NOTES.G4, NOTES.A4] : [NOTES.G4, NOTES.A4, NOTES.C5, NOTES.D5, NOTES.E5];
-      playPipa(scale[noteIdx], t + i * b, b * 0.25, v * 0.2);
+    // 额外的急促双鼓（每4拍末尾加一个切分）
+    for (let i = 3; i < 48; i += 4) {
+      playDrum(t + (i + 0.5) * b, v * 0.25);
     }
-
-    // 鼓点 - 更密集
-    for (let i = 16; i < 32; i += 2) {
-      playDrum(t + i * b, v * 0.4);
-    }
-    for (let i = 17; i < 32; i += 2) {
-      playDrum(t + i * b, v * 0.2);
-    }
-
-    // 高音笛子点缀 (装饰音)
-    playDizi(NOTES.G5, t + 24 * b, b * 0.3, v * 0.3);
-    playDizi(NOTES.A5, t + 28 * b, b * 0.3, v * 0.3);
   }
 
   function stopMusic() {
