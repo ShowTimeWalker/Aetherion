@@ -170,8 +170,9 @@ const AudioSystem = (() => {
 
   function startMusic() {
     if (musicPlaying || !ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
     musicPlaying = true;
-    playMusicPhrase();
+    setTimeout(() => playMusicPhrase(), 200);
   }
 
   function playMusicPhrase() {
@@ -421,35 +422,59 @@ const AudioSystem = (() => {
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    const osc = ctx.createOscillator();
+    // Deep hoarse male scream "啊！~~~~"
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    // Deep male voice scream
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.linearRampToValueAtTime(350, now + 0.1);
-    osc.frequency.linearRampToValueAtTime(180, now + 1.5);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 2.2);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(150, now);
+    osc1.frequency.linearRampToValueAtTime(280, now + 0.08);
+    osc1.frequency.linearRampToValueAtTime(120, now + 2.0);
+    osc1.frequency.exponentialRampToValueAtTime(60, now + 2.5);
 
-    // Low-pass filter for deep male tone
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(155, now);
+    osc2.frequency.linearRampToValueAtTime(285, now + 0.08);
+    osc2.frequency.linearRampToValueAtTime(125, now + 2.0);
+    osc2.frequency.exponentialRampToValueAtTime(55, now + 2.5);
+
+    // Low-pass for deep raspy tone
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 800;
-    filter.Q.value = 1;
+    filter.frequency.value = 600;
+    filter.Q.value = 0.8;
 
-    osc.connect(filter);
-    filter.connect(gain);
+    // Distortion for hoarse quality
+    const distortion = ctx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      curve[i] = (Math.PI + 30) * x / (Math.PI + 30 * Math.abs(x));
+    }
+    distortion.curve = curve;
+
+    const mix = ctx.createGain();
+    mix.gain.value = 0.6;
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(distortion);
+    distortion.connect(mix);
+    mix.connect(gain);
 
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
-    gain.gain.setValueAtTime(0.6, now + 0.4);
-    gain.gain.linearRampToValueAtTime(0.4, now + 1.2);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+    gain.gain.linearRampToValueAtTime(0.7, now + 0.04);
+    gain.gain.setValueAtTime(0.7, now + 0.5);
+    gain.gain.linearRampToValueAtTime(0.45, now + 1.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
 
     gain.connect(sfxGain);
 
-    osc.start(now);
-    osc.stop(now + 2.5);
+    osc1.start(now);
+    osc1.stop(now + 2.8);
+    osc2.start(now);
+    osc2.stop(now + 2.8);
   }
 
   function resetNinjaShout() {
