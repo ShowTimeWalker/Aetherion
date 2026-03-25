@@ -22,7 +22,7 @@ const AudioSystem = (() => {
       masterGain.connect(ctx.destination);
 
       musicGain = ctx.createGain();
-      musicGain.gain.value = 0.5;
+      musicGain.gain.value = 1.0;
       musicGain.connect(masterGain);
 
       sfxGain = ctx.createGain();
@@ -88,8 +88,8 @@ const AudioSystem = (() => {
     noiseGain.connect(musicGain);
 
     gain.gain.setValueAtTime(0, startTime);
-    gain.gain.linearRampToValueAtTime(vol * 0.3, startTime + 0.05);
-    gain.gain.setValueAtTime(vol * 0.3, startTime + duration * 0.7);
+    gain.gain.linearRampToValueAtTime(vol, startTime + 0.05);
+    gain.gain.setValueAtTime(vol, startTime + duration * 0.7);
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
     osc.start(startTime);
@@ -415,6 +415,60 @@ const AudioSystem = (() => {
     }
   }
 
+  // ===== Death Scream =====
+  function playDeathScream() {
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Harsh high-pitched scream with vibrato
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(800, now);
+    osc1.frequency.linearRampToValueAtTime(1200, now + 0.15);
+    osc1.frequency.linearRampToValueAtTime(600, now + 0.8);
+    osc1.frequency.exponentialRampToValueAtTime(200, now + 1.8);
+
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(820, now);
+    osc2.frequency.linearRampToValueAtTime(1250, now + 0.15);
+    osc2.frequency.linearRampToValueAtTime(620, now + 0.8);
+    osc2.frequency.exponentialRampToValueAtTime(180, now + 1.8);
+
+    // Vibrato on scream
+    const vib = ctx.createOscillator();
+    const vibGain = ctx.createGain();
+    vib.frequency.value = 15;
+    vibGain.gain.value = 60;
+    vib.connect(vibGain);
+    vibGain.connect(osc1.frequency);
+    vibGain.connect(osc2.frequency);
+    vib.start(now);
+    vib.stop(now + 2);
+
+    const mix = ctx.createGain();
+    mix.gain.value = 0.5;
+
+    osc1.connect(mix);
+    osc2.connect(mix);
+    mix.connect(gain);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+    gain.gain.setValueAtTime(0.5, now + 0.3);
+    gain.gain.linearRampToValueAtTime(0.35, now + 1.0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+    gain.connect(sfxGain);
+
+    osc1.start(now);
+    osc1.stop(now + 2.2);
+    osc2.start(now);
+    osc2.stop(now + 2.2);
+  }
+
   function resetNinjaShout() {
     ninjaHasShouted = false;
   }
@@ -436,6 +490,7 @@ const AudioSystem = (() => {
     playBladeSfx,
     playSmokeBombSfx,
     playNinjaShout,
+    playDeathScream,
     resetNinjaShout,
   };
 })();

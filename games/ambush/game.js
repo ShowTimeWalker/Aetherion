@@ -1735,7 +1735,7 @@ function startGame() {
 function gameOver() {
   running = false;
   cancelAnimationFrame(animFrame);
-  AudioSystem.stopAll();
+  AudioSystem.playDeathScream();
   hud.style.display = 'none';
   title.textContent = '十面埋伏';
   const t = gameTime;
