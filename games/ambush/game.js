@@ -311,13 +311,14 @@ function createMaskedSprite() {
 }
 
 function resize() {
-  const s = Math.min(window.innerWidth, window.innerHeight) - 40;
-  W = H = s;
-  canvas.width = canvas.height = s;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
   cx = W / 2;
   cy = H / 2;
-  arenaR = s * 0.88;
-  playerR = arenaR * 0.03;
+  arenaR = Math.min(W, H) / 2 - 20;
+  playerR = 15;
   bambooCache = null;
   if (!running) { player.x = cx; player.y = cy; drawIdle(); }
 }
