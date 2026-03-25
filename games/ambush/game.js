@@ -19,6 +19,8 @@ let player = { x: 0, y: 0 };
 let arrows = [];
 let blades = [];
 let daggers = [];
+let shurikens = [];
+let ninjas = [];
 let score = 0;
 let gameTime = 0;
 let running = false;
@@ -28,10 +30,11 @@ let spawnTimer = 0;
 let formationTimer = 0;
 let bladeTimer = 0;
 let daggerTimer = 0;
+let ninjaTimer = 0;
 let keys = {};
 let animFrame;
 
-let playerSprite, arrowSprite;
+let playerSprite, arrowSprite, ninjaSprite, shurikenSprite;
 
 function createPlayerSprite() {
   const size = 64;
@@ -138,6 +141,116 @@ function createArrowSprite() {
   g.beginPath(); g.moveTo(14, cy - 2); g.lineTo(14, cy + 2); g.stroke();
 
   arrowSprite = c;
+}
+
+function createNinjaSprite() {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const s = size / 2;
+
+  // Dark glow
+  const glow = g.createRadialGradient(s, s, 0, s, s, s * 0.9);
+  glow.addColorStop(0, 'rgba(100,0,0,0.15)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(s, s, s * 0.9, 0, Math.PI * 2); g.fill();
+
+  // Black robe
+  g.fillStyle = '#1a1a1a';
+  g.beginPath();
+  g.moveTo(s, s * 0.55);
+  g.quadraticCurveTo(s * 1.6, s * 1.0, s * 1.3, s * 1.8);
+  g.lineTo(s * 0.7, s * 1.8);
+  g.quadraticCurveTo(s * 0.4, s * 1.0, s, s * 0.55);
+  g.fill();
+  g.strokeStyle = '#333';
+  g.lineWidth = 1;
+  g.stroke();
+
+  // Belt
+  g.strokeStyle = '#444';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(s * 0.72, s * 1.15);
+  g.lineTo(s * 1.28, s * 1.15);
+  g.stroke();
+
+  // Face
+  g.fillStyle = '#e8c898';
+  g.beginPath(); g.arc(s, s * 0.48, s * 0.18, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#c0a070';
+  g.lineWidth = 0.5;
+  g.stroke();
+
+  // Red eyes
+  g.fillStyle = '#cc0000';
+  g.beginPath(); g.arc(s - s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(s + s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
+
+  // Black hat (斗笠, darker)
+  g.fillStyle = '#222';
+  g.beginPath();
+  g.moveTo(s * 0.15, s * 0.52);
+  g.quadraticCurveTo(s, s * 0.18, s * 1.85, s * 0.52);
+  g.quadraticCurveTo(s, s * 0.45, s * 0.15, s * 0.52);
+  g.fill();
+  g.strokeStyle = '#444';
+  g.lineWidth = 1;
+  g.stroke();
+
+  // Hat top
+  g.fillStyle = '#2a2a2a';
+  g.beginPath();
+  g.moveTo(s * 0.55, s * 0.42);
+  g.lineTo(s, s * 0.12);
+  g.lineTo(s * 1.45, s * 0.42);
+  g.quadraticCurveTo(s, s * 0.38, s * 0.55, s * 0.42);
+  g.fill();
+  g.strokeStyle = '#444';
+  g.lineWidth = 0.8;
+  g.stroke();
+
+  ninjaSprite = c;
+}
+
+function createShurikenSprite() {
+  const size = 48;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const s = size / 2;
+
+  // Four-pointed shuriken
+  g.fillStyle = '#c0c0c0';
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const angle = (Math.PI / 2) * i - Math.PI / 2;
+    const nextAngle = (Math.PI / 2) * (i + 0.5) - Math.PI / 2;
+    const tipX = s + Math.cos(angle) * s * 0.8;
+    const tipY = s + Math.sin(angle) * s * 0.8;
+    const innerX = s + Math.cos(nextAngle) * s * 0.25;
+    const innerY = s + Math.sin(nextAngle) * s * 0.25;
+    if (i === 0) g.moveTo(tipX, tipY);
+    else g.lineTo(tipX, tipY);
+    g.lineTo(innerX, innerY);
+  }
+  g.closePath();
+  g.fill();
+
+  // Edge highlight
+  g.strokeStyle = '#e0e0e0';
+  g.lineWidth = 0.5;
+  g.stroke();
+
+  // Center circle
+  g.fillStyle = '#888';
+  g.beginPath(); g.arc(s, s, s * 0.12, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#666';
+  g.beginPath(); g.arc(s, s, s * 0.06, 0, Math.PI * 2); g.fill();
+
+  shurikenSprite = c;
 }
 
 function resize() {
@@ -885,6 +998,114 @@ function updateTurningWeapon(w, dt) {
   }
 }
 
+// ========== Ninja Boss System (黑衣人) ==========
+
+function spawnNinja() {
+  const edgeAngle = Math.random() * Math.PI * 2;
+  const startX = cx + Math.cos(edgeAngle) * arenaR;
+  const startY = cy + Math.sin(edgeAngle) * arenaR;
+  // Target: random point inside arena (not too close to edge)
+  const targetDist = arenaR * (0.2 + Math.random() * 0.3);
+  const targetAngle = Math.random() * Math.PI * 2;
+  const targetX = cx + Math.cos(targetAngle) * targetDist;
+  const targetY = cy + Math.sin(targetAngle) * targetDist;
+  // Exit direction: away from target through center-ish
+  const exitAngle = Math.atan2(targetY - cy, targetX - cx);
+  const exitX = cx + Math.cos(exitAngle) * (arenaR + 30);
+  const exitY = cy + Math.sin(exitAngle) * (arenaR + 30);
+
+  ninjas.push({
+    x: startX, y: startY,
+    targetX, targetY,
+    exitX, exitY,
+    state: 'entering', // entering -> throwing -> retreating -> done
+    speed: 1.2,
+    throwTimer: 0,
+    throwCount: 0,
+    maxThrows: 5,
+    throwInterval: 2.0,
+    elapsed: 0,
+    hitR: PLAYER_HIT_R + 2,
+  });
+}
+
+function updateNinjas(dt) {
+  for (let i = ninjas.length - 1; i >= 0; i--) {
+    const n = ninjas[i];
+    n.elapsed += dt;
+
+    if (n.state === 'entering') {
+      const dx = n.targetX - n.x, dy = n.targetY - n.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 3) {
+        n.state = 'throwing';
+        n.throwTimer = 0;
+      } else {
+        n.x += (dx / dist) * n.speed * dt * 60;
+        n.y += (dy / dist) * n.speed * dt * 60;
+      }
+    }
+
+    if (n.state === 'throwing') {
+      n.throwTimer += dt;
+      if (n.throwTimer >= n.throwInterval && n.throwCount < n.maxThrows) {
+        n.throwTimer -= n.throwInterval;
+        n.throwCount++;
+        throwShuriken(n);
+      }
+      if (n.throwCount >= n.maxThrows) {
+        n.state = 'retreating';
+      }
+    }
+
+    if (n.state === 'retreating') {
+      const dx = n.exitX - n.x, dy = n.exitY - n.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 3) {
+        ninjas.splice(i, 1);
+        continue;
+      }
+      n.x += (dx / dist) * n.speed * 1.3 * dt * 60;
+      n.y += (dy / dist) * n.speed * 1.3 * dt * 60;
+    }
+
+    // Collision with player
+    const px = n.x - player.x, py = n.y - player.y;
+    if (Math.sqrt(px * px + py * py) < n.hitR + PLAYER_HIT_R) {
+      gameOver();
+      return;
+    }
+  }
+}
+
+function throwShuriken(ninja) {
+  const dx = player.x - ninja.x, dy = player.y - ninja.y;
+  const angle = Math.atan2(dy, dx);
+  const speed = 3.0;
+  shurikens.push({
+    x: ninja.x, y: ninja.y,
+    dx: Math.cos(angle) * speed,
+    dy: Math.sin(angle) * speed,
+    rotation: 0,
+    rotSpeed: 8 + Math.random() * 4,
+  });
+}
+
+function drawNinja(n) {
+  if (!ninjaSprite) return;
+  const sz = playerR * 4;
+  ctx.drawImage(ninjaSprite, n.x - sz / 2, n.y - sz / 2, sz, sz);
+}
+
+function drawShuriken(sh) {
+  ctx.save();
+  ctx.translate(sh.x, sh.y);
+  ctx.rotate(sh.rotation);
+  const sz = playerR * 2.5;
+  ctx.drawImage(shurikenSprite, -sz / 2, -sz / 2, sz, sz);
+  ctx.restore();
+}
+
 // ========== Main Update ==========
 
 function update(dt) {
@@ -955,6 +1176,22 @@ function update(dt) {
     }
   }
 
+  // Spawn ninja boss: first at 50s, then every 30s
+  ninjaTimer += dt;
+  const ninjaInterval = 30;
+  const ninjaStart = 50;
+  if (gameTime >= ninjaStart && ninjaTimer >= ninjaInterval) {
+    ninjaTimer -= ninjaInterval;
+    spawnNinja();
+  }
+  // Spawn first ninja immediately at 50s
+  if (gameTime >= ninjaStart && gameTime - dt < ninjaStart) {
+    spawnNinja();
+    ninjaTimer = 0;
+  }
+
+  updateNinjas(dt);
+
   // Update arrows (STRAIGHT ONLY)
   for (let i = arrows.length - 1; i >= 0; i--) {
     const a = arrows[i];
@@ -1004,6 +1241,24 @@ function update(dt) {
     }
   }
 
+  // Update shurikens
+  for (let i = shurikens.length - 1; i >= 0; i--) {
+    const sh = shurikens[i];
+    sh.x += sh.dx * dt * 60;
+    sh.y += sh.dy * dt * 60;
+    sh.rotation += sh.rotSpeed * dt;
+    const sdx = sh.x - cx, sdy = sh.y - cy;
+    if (Math.sqrt(sdx * sdx + sdy * sdy) > arenaR + 40) {
+      shurikens.splice(i, 1);
+      continue;
+    }
+    const scx = sh.x - player.x, scy = sh.y - player.y;
+    if (Math.sqrt(scx * scx + scy * scy) < PLAYER_HIT_R + 4) {
+      gameOver();
+      return;
+    }
+  }
+
   score = Math.floor(gameTime * 10);
   scoreText.textContent = `分数: ${score}`;
   timeText.textContent = `时间: ${gameTime.toFixed(1)}s`;
@@ -1017,6 +1272,8 @@ function render() {
   for (const a of arrows) drawArrow(a);
   for (const b of blades) drawBlade(b);
   for (const d of daggers) drawDagger(d);
+  for (const n of ninjas) drawNinja(n);
+  for (const sh of shurikens) drawShuriken(sh);
   drawPlayer();
 }
 
@@ -1047,8 +1304,8 @@ function togglePause() {
 
 function startGame() {
   player.x = cx; player.y = cy;
-  arrows = []; blades = []; daggers = [];
-  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0;
+  arrows = []; blades = []; daggers = []; shurikens = []; ninjas = [];
+  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0; ninjaTimer = 0;
   running = true;
   paused = false;
   document.getElementById('pauseOverlay').style.display = 'none';
@@ -1144,4 +1401,6 @@ window.addEventListener('resize', resize);
 // Init
 createPlayerSprite();
 createArrowSprite();
+createNinjaSprite();
+createShurikenSprite();
 resize();
