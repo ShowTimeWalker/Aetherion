@@ -9,11 +9,11 @@ const title = document.getElementById('title');
 const subtitle = document.getElementById('subtitle');
 const startBtn = document.getElementById('startBtn');
 
-let W, H, cx, cy, arenaR, playerR;
-const PLAYER_SPEED = 5.0;
-const ARROW_LEN = 22;
-const ARROW_HEAD = 8;
-const PLAYER_HIT_R = 10;
+let W, H, cx, cy, arenaR, playerR, scale;
+const PLAYER_SPEED_BASE = 5.0;
+let playerSpeed;
+const BASE_R = 350;
+let PLAYER_HIT_R;
 
 let player = { x: 0, y: 0 };
 let arrows = [];
@@ -28,6 +28,7 @@ let score = 0;
 let gameTime = 0;
 let running = false;
 let paused = false;
+let gameOverCalled = false;
 let lastTime = 0;
 let spawnTimer = 0;
 let formationTimer = 0;
@@ -154,14 +155,12 @@ function createNinjaSprite() {
   const g = c.getContext('2d');
   const s = size / 2;
 
-  // Dark glow
   const glow = g.createRadialGradient(s, s, 0, s, s, s * 0.9);
   glow.addColorStop(0, 'rgba(100,0,0,0.15)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = glow;
   g.beginPath(); g.arc(s, s, s * 0.9, 0, Math.PI * 2); g.fill();
 
-  // Black robe
   g.fillStyle = '#1a1a1a';
   g.beginPath();
   g.moveTo(s, s * 0.55);
@@ -173,7 +172,6 @@ function createNinjaSprite() {
   g.lineWidth = 1;
   g.stroke();
 
-  // Belt
   g.strokeStyle = '#444';
   g.lineWidth = 2;
   g.beginPath();
@@ -181,19 +179,16 @@ function createNinjaSprite() {
   g.lineTo(s * 1.28, s * 1.15);
   g.stroke();
 
-  // Face
   g.fillStyle = '#e8c898';
   g.beginPath(); g.arc(s, s * 0.48, s * 0.18, 0, Math.PI * 2); g.fill();
   g.strokeStyle = '#c0a070';
   g.lineWidth = 0.5;
   g.stroke();
 
-  // Red eyes
   g.fillStyle = '#cc0000';
   g.beginPath(); g.arc(s - s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
   g.beginPath(); g.arc(s + s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
 
-  // Black hat (斗笠, darker)
   g.fillStyle = '#222';
   g.beginPath();
   g.moveTo(s * 0.15, s * 0.52);
@@ -204,7 +199,6 @@ function createNinjaSprite() {
   g.lineWidth = 1;
   g.stroke();
 
-  // Hat top
   g.fillStyle = '#2a2a2a';
   g.beginPath();
   g.moveTo(s * 0.55, s * 0.42);
@@ -226,7 +220,6 @@ function createShurikenSprite() {
   const g = c.getContext('2d');
   const s = size / 2;
 
-  // Four-pointed shuriken
   g.fillStyle = '#c0c0c0';
   g.beginPath();
   for (let i = 0; i < 4; i++) {
@@ -243,12 +236,10 @@ function createShurikenSprite() {
   g.closePath();
   g.fill();
 
-  // Edge highlight
   g.strokeStyle = '#e0e0e0';
   g.lineWidth = 0.5;
   g.stroke();
 
-  // Center circle
   g.fillStyle = '#888';
   g.beginPath(); g.arc(s, s, s * 0.12, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#666';
@@ -264,7 +255,6 @@ function createMaskedSprite() {
   const g = c.getContext('2d');
   const s = size / 2;
 
-  // Dark cloak body (smaller than player)
   g.fillStyle = '#2a2a2a';
   g.beginPath();
   g.moveTo(s, s * 0.6);
@@ -276,7 +266,6 @@ function createMaskedSprite() {
   g.lineWidth = 0.8;
   g.stroke();
 
-  // Belt
   g.strokeStyle = '#555';
   g.lineWidth = 1.5;
   g.beginPath();
@@ -284,19 +273,16 @@ function createMaskedSprite() {
   g.lineTo(s * 1.25, s * 1.15);
   g.stroke();
 
-  // Black mask (no face visible, just dark oval)
   g.fillStyle = '#111';
   g.beginPath(); g.arc(s, s * 0.5, s * 0.2, 0, Math.PI * 2); g.fill();
   g.strokeStyle = '#333';
   g.lineWidth = 0.5;
   g.stroke();
 
-  // Eye slits (small red dots)
   g.fillStyle = '#aa3333';
   g.beginPath(); g.arc(s - s * 0.06, s * 0.48, 1.2, 0, Math.PI * 2); g.fill();
   g.beginPath(); g.arc(s + s * 0.06, s * 0.48, 1.2, 0, Math.PI * 2); g.fill();
 
-  // Hood
   g.fillStyle = '#1a1a1a';
   g.beginPath();
   g.moveTo(s * 0.25, s * 0.55);
@@ -317,10 +303,25 @@ function resize() {
   canvas.height = H;
   cx = W / 2;
   cy = H / 2;
-  arenaR = Math.min(W, H) / 2 - 20;
-  playerR = 15;
+  arenaR = Math.min(W, H) * 0.45;
+  scale = arenaR / BASE_R;
+  playerR = 15 * scale;
+  PLAYER_HIT_R = 10 * scale;
+  playerSpeed = PLAYER_SPEED_BASE * scale;
   bambooCache = null;
-  if (!running) { player.x = cx; player.y = cy; drawIdle(); }
+  // Reposition player if game is running (keep relative position)
+  if (running) {
+    const pdx = player.x - cx, pdy = player.y - cy;
+    const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+    if (pdist > arenaR - playerR) {
+      const maxDist = arenaR - playerR;
+      player.x = cx + (pdx / pdist) * maxDist;
+      player.y = cy + (pdy / pdist) * maxDist;
+    }
+  } else {
+    player.x = cx; player.y = cy;
+    drawIdle();
+  }
 }
 
 function drawIdle() {
@@ -331,18 +332,19 @@ function drawIdle() {
 }
 
 function drawArena() {
-  const g = ctx.createRadialGradient(cx, cy, arenaR - 5, cx, cy, arenaR + 15);
+  const S = scale;
+  const g = ctx.createRadialGradient(cx, cy, arenaR - 5 * S, cx, cy, arenaR + 15 * S);
   g.addColorStop(0, 'rgba(200,160,60,0.15)');
   g.addColorStop(1, 'rgba(200,160,60,0)');
   ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx, cy, arenaR + 15, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, arenaR + 15 * S, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(200,160,60,0.4)';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2 * S;
   ctx.beginPath(); ctx.arc(cx, cy, arenaR, 0, Math.PI * 2); ctx.stroke();
   ctx.fillStyle = 'rgba(20,18,12,0.6)';
   ctx.beginPath(); ctx.arc(cx, cy, arenaR, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(200,160,60,0.12)';
-  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, 4 * S, 0, Math.PI * 2); ctx.fill();
 }
 
 // ========== Bamboo Forest Background ==========
@@ -352,37 +354,33 @@ function generateBambooForest() {
   const leaves = [];
   const fogBlobs = [];
 
-  // Generate bamboo stems around the arena
   const numStems = 60;
   for (let i = 0; i < numStems; i++) {
     const angle = Math.random() * Math.PI * 2;
     const dist = arenaR * 0.55 + Math.random() * arenaR * 1.5;
     const x = cx + Math.cos(angle) * dist;
     const y = cy + Math.sin(angle) * dist;
-    // Check if stem is inside arena
     const dx = x - cx, dy = y - cy;
     if (Math.sqrt(dx * dx + dy * dy) < arenaR * 0.85) continue;
-    // Clip to canvas
     if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue;
 
-    const layer = Math.random(); // 0=far, 1=near
-    const height = 80 + layer * 200 + Math.random() * 120;
-    const width = 3 + layer * 4 + Math.random() * 3;
+    const layer = Math.random();
+    const height = (80 + layer * 200 + Math.random() * 120) * scale;
+    const width = (3 + layer * 4 + Math.random() * 3) * scale;
     const green = 20 + layer * 40;
     const r = 10 + layer * 15;
     const g = green + Math.floor(Math.random() * 20);
     const b = 8 + layer * 12;
     const alpha = 0.3 + layer * 0.5;
-    const sway = (Math.random() - 0.5) * 8;
+    const sway = (Math.random() - 0.5) * 8 * scale;
 
     stems.push({ x, y, height, width, r, g, b, alpha, sway, layer });
 
-    // Add leaves to each stem
     const numLeaves = 3 + Math.floor(layer * 5) + Math.floor(Math.random() * 4);
     for (let j = 0; j < numLeaves; j++) {
       const ly = y - height * (0.15 + Math.random() * 0.8);
-      const lx = x + (Math.random() - 0.5) * 30 + sway * ((y - ly) / height);
-      const leafLen = 12 + Math.random() * 25;
+      const lx = x + (Math.random() - 0.5) * 30 * scale + sway * ((y - ly) / height);
+      const leafLen = (12 + Math.random() * 25) * scale;
       const leafAngle = (Math.random() - 0.5) * 1.5 + (lx > x ? 0.3 : -0.3);
       const leafAlpha = alpha * (0.4 + Math.random() * 0.5);
       const leafG = g + 15 + Math.floor(Math.random() * 25);
@@ -390,11 +388,9 @@ function generateBambooForest() {
     }
   }
 
-  // Sort by layer for depth
   stems.sort((a, b) => a.layer - b.layer);
   leaves.sort((a, b) => a.layer - b.layer);
 
-  // Fog blobs
   const numFog = 15;
   for (let i = 0; i < numFog; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -402,7 +398,7 @@ function generateBambooForest() {
     fogBlobs.push({
       x: cx + Math.cos(angle) * dist,
       y: cy + Math.sin(angle) * dist,
-      radius: 40 + Math.random() * 100,
+      radius: (40 + Math.random() * 100) * scale,
       alpha: 0.03 + Math.random() * 0.06,
       drift: (Math.random() - 0.5) * 0.5,
       phase: Math.random() * Math.PI * 2,
@@ -418,14 +414,12 @@ function drawBambooForest(time) {
   const { stems, leaves, fogBlobs } = bambooCache;
   const t = time || 0;
 
-  // Dark background
   ctx.fillStyle = '#060d08';
   ctx.fillRect(0, 0, W, H);
 
-  // Draw fog (behind bamboo)
   for (const f of fogBlobs) {
-    const fx = f.x + Math.sin(t * 0.3 + f.phase) * 20;
-    const fy = f.y + Math.cos(t * 0.2 + f.phase) * 10;
+    const fx = f.x + Math.sin(t * 0.3 + f.phase) * 20 * scale;
+    const fy = f.y + Math.cos(t * 0.2 + f.phase) * 10 * scale;
     const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.radius);
     grad.addColorStop(0, `rgba(120,160,130,${f.alpha})`);
     grad.addColorStop(1, 'rgba(120,160,130,0)');
@@ -435,7 +429,6 @@ function drawBambooForest(time) {
     ctx.fill();
   }
 
-  // Draw stems
   for (const s of stems) {
     const swayX = Math.sin(t * 0.5 + s.x * 0.01) * s.sway;
     const topX = s.x + swayX;
@@ -444,20 +437,18 @@ function drawBambooForest(time) {
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
-    // Slight curve for natural look
     const midX = s.x + swayX * 0.4;
     const midY = s.y - s.height * 0.5;
     ctx.quadraticCurveTo(midX, midY, topX, s.y - s.height);
     ctx.stroke();
 
-    // Bamboo nodes (joints)
     const nodeCount = 3 + Math.floor(s.layer * 3);
     for (let n = 1; n <= nodeCount; n++) {
       const frac = n / (nodeCount + 1);
-      const nx = s.x + swayX * frac * frac; // sway increases toward top
+      const nx = s.x + swayX * frac * frac;
       const ny = s.y - s.height * frac;
       ctx.strokeStyle = `rgba(${s.r - 5},${s.g - 10},${s.b},${s.alpha * 0.8})`;
-      ctx.lineWidth = s.width + 1.5;
+      ctx.lineWidth = s.width + 1.5 * scale;
       ctx.beginPath();
       ctx.moveTo(nx - s.width * 0.8, ny);
       ctx.lineTo(nx + s.width * 0.8, ny);
@@ -465,20 +456,17 @@ function drawBambooForest(time) {
     }
   }
 
-  // Draw leaves
   for (const l of leaves) {
-    const lx = l.x + Math.sin(t * 0.7 + l.y * 0.02) * 2;
+    const lx = l.x + Math.sin(t * 0.7 + l.y * 0.02) * 2 * scale;
     ctx.save();
     ctx.translate(lx, l.y);
     ctx.rotate(l.angle);
     ctx.fillStyle = `rgba(${Math.max(0, l.r)},${Math.min(255, l.g)},${Math.min(255, l.b)},${l.alpha})`;
     ctx.beginPath();
-    // Leaf shape: elongated ellipse
     ctx.ellipse(0, 0, l.len, l.len * 0.18, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Leaf vein
     ctx.strokeStyle = `rgba(${l.r + 20},${l.g - 10},${l.b},${l.alpha * 0.4})`;
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 0.5 * scale;
     ctx.beginPath();
     ctx.moveTo(-l.len * 0.8, 0);
     ctx.lineTo(l.len * 0.8, 0);
@@ -486,11 +474,10 @@ function drawBambooForest(time) {
     ctx.restore();
   }
 
-  // More fog (in front of bamboo, subtle)
   for (let i = 0; i < fogBlobs.length / 2; i++) {
     const f = fogBlobs[i];
-    const fx = f.x + Math.sin(t * 0.4 + f.phase + 2) * 25;
-    const fy = f.y + Math.cos(t * 0.3 + f.phase + 1) * 15;
+    const fx = f.x + Math.sin(t * 0.4 + f.phase + 2) * 25 * scale;
+    const fy = f.y + Math.cos(t * 0.3 + f.phase + 1) * 15 * scale;
     const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.radius * 0.7);
     grad.addColorStop(0, `rgba(80,120,90,${f.alpha * 0.6})`);
     grad.addColorStop(1, 'rgba(80,120,90,0)');
@@ -507,146 +494,135 @@ function drawPlayer() {
   ctx.drawImage(playerSprite, player.x - sz / 2, player.y - sz / 2, sz, sz);
 }
 
-// ========== Arrow Drawing (straight only) ==========
+// ========== Arrow Drawing ==========
 
 function drawArrow(a) {
   ctx.save();
   ctx.translate(a.x, a.y);
   ctx.rotate(Math.atan2(a.dy, a.dx));
-  const len = 24, head = 8;
+  const S = scale;
+  const len = 24 * S, head = 8 * S;
   ctx.strokeStyle = 'rgba(232,192,96,0.15)';
-  ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(-len - 16, 0); ctx.lineTo(-len, 0); ctx.stroke();
+  ctx.lineWidth = 5 * S;
+  ctx.beginPath(); ctx.moveTo(-len - 16 * S, 0); ctx.lineTo(-len, 0); ctx.stroke();
   ctx.strokeStyle = '#d4a840';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(2, 0); ctx.stroke();
+  ctx.lineWidth = 2 * S;
+  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(2 * S, 0); ctx.stroke();
   ctx.fillStyle = '#cc3333';
-  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(-len + 7, -3.5); ctx.lineTo(-len + 7, 0); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(-len + 7, 3.5); ctx.lineTo(-len + 7, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(-len + 7 * S, -3.5 * S); ctx.lineTo(-len + 7 * S, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(-len + 7 * S, 3.5 * S); ctx.lineTo(-len + 7 * S, 0); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#dd5555';
-  ctx.beginPath(); ctx.moveTo(-len + 2, 0); ctx.lineTo(-len + 9, -2.5); ctx.lineTo(-len + 9, 0); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-len + 2, 0); ctx.lineTo(-len + 9, 2.5); ctx.lineTo(-len + 9, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-len + 2 * S, 0); ctx.lineTo(-len + 9 * S, -2.5 * S); ctx.lineTo(-len + 9 * S, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-len + 2 * S, 0); ctx.lineTo(-len + 9 * S, 2.5 * S); ctx.lineTo(-len + 9 * S, 0); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#c0c0c0';
   ctx.beginPath();
-  ctx.moveTo(head, 0); ctx.lineTo(head - 7, -3); ctx.lineTo(head - 5, 0); ctx.lineTo(head - 7, 3);
+  ctx.moveTo(head, 0); ctx.lineTo(head - 7 * S, -3 * S); ctx.lineTo(head - 5 * S, 0); ctx.lineTo(head - 7 * S, 3 * S);
   ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
-// ========== Curved Blade Drawing (弯刀) ==========
+// ========== Curved Blade Drawing ==========
 
 function drawBlade(b) {
   ctx.save();
   ctx.translate(b.x, b.y);
   ctx.rotate(Math.atan2(b.dy, b.dx));
+  const S = scale;
 
-  // Trail glow (purple tint)
   ctx.strokeStyle = 'rgba(180,120,255,0.12)';
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-10, 0); ctx.stroke();
+  ctx.lineWidth = 6 * S;
+  ctx.beginPath(); ctx.moveTo(-20 * S, 0); ctx.lineTo(-10 * S, 0); ctx.stroke();
 
-  // Handle (wrapped)
   ctx.fillStyle = '#5a3a20';
   ctx.beginPath();
-  ctx.roundRect(-16, -4, 12, 8, 2);
+  ctx.roundRect(-16 * S, -4 * S, 12 * S, 8 * S, 2 * S);
   ctx.fill();
   ctx.strokeStyle = '#7a5a30';
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 0.5 * S;
   ctx.stroke();
 
-  // Handle wrap
   ctx.strokeStyle = '#8a6a3a';
-  ctx.lineWidth = 0.8;
+  ctx.lineWidth = 0.8 * S;
   for (let i = -14; i < -6; i += 2.5) {
-    ctx.beginPath(); ctx.moveTo(i, -4); ctx.lineTo(i, 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i * S, -4 * S); ctx.lineTo(i * S, 4 * S); ctx.stroke();
   }
 
-  // Guard (metal connector)
   ctx.fillStyle = '#b0b0b0';
   ctx.beginPath();
-  ctx.roundRect(-4, -5, 4, 10, 1);
+  ctx.roundRect(-4 * S, -5 * S, 4 * S, 10 * S, 1 * S);
   ctx.fill();
   ctx.strokeStyle = '#909090';
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 0.5 * S;
   ctx.stroke();
 
-  // Curved blade (arc shape - streamlined double edge)
   ctx.fillStyle = '#d0d0d0';
   ctx.beginPath();
-  ctx.moveTo(0, -4);
-  ctx.quadraticCurveTo(10, -9, 20, -1.5);
-  ctx.lineTo(20, 1.5);
-  ctx.quadraticCurveTo(10, 9, 0, 4);
+  ctx.moveTo(0, -4 * S);
+  ctx.quadraticCurveTo(10 * S, -9 * S, 20 * S, -1.5 * S);
+  ctx.lineTo(20 * S, 1.5 * S);
+  ctx.quadraticCurveTo(10 * S, 9 * S, 0, 4 * S);
   ctx.closePath();
   ctx.fill();
 
-  // Edge highlight (top)
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 0.5 * S;
   ctx.beginPath();
-  ctx.moveTo(1, -3.5);
-  ctx.quadraticCurveTo(10, -8, 19, -1);
+  ctx.moveTo(1 * S, -3.5 * S);
+  ctx.quadraticCurveTo(10 * S, -8 * S, 19 * S, -1 * S);
   ctx.stroke();
 
-  // Center ridge
   ctx.strokeStyle = '#b0b0b0';
-  ctx.lineWidth = 0.3;
+  ctx.lineWidth = 0.3 * S;
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(12, 1, 19, 0);
+  ctx.quadraticCurveTo(12 * S, 1 * S, 19 * S, 0);
   ctx.stroke();
 
   ctx.restore();
 }
 
-// ========== Dagger Drawing (匕首) ==========
+// ========== Dagger Drawing ==========
 
 function drawDagger(d) {
   ctx.save();
   ctx.translate(d.x, d.y);
   ctx.rotate(Math.atan2(d.dy, d.dx));
+  const S = scale;
 
-  // Trail glow (reddish)
   ctx.strokeStyle = 'rgba(255,80,80,0.1)';
-  ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-8, 0); ctx.stroke();
+  ctx.lineWidth = 5 * S;
+  ctx.beginPath(); ctx.moveTo(-14 * S, 0); ctx.lineTo(-8 * S, 0); ctx.stroke();
 
-  // Handle
   ctx.fillStyle = '#4a2a15';
   ctx.beginPath();
-  ctx.roundRect(-14, -2.5, 8, 5, 1.5);
+  ctx.roundRect(-14 * S, -2.5 * S, 8 * S, 5 * S, 1.5 * S);
   ctx.fill();
 
-  // Handle wrap
   ctx.strokeStyle = '#6a4a2a';
-  ctx.lineWidth = 0.6;
+  ctx.lineWidth = 0.6 * S;
   for (let i = -12; i < -8; i += 2) {
-    ctx.beginPath(); ctx.moveTo(i, -2.5); ctx.lineTo(i, 2.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i * S, -2.5 * S); ctx.lineTo(i * S, 2.5 * S); ctx.stroke();
   }
 
-  // Guard
   ctx.fillStyle = '#a0a0a0';
-  ctx.fillRect(-6, -3.5, 2.5, 7);
+  ctx.fillRect(-6 * S, -3.5 * S, 2.5 * S, 7 * S);
 
-  // Short blade (double-edged)
   ctx.fillStyle = '#c8c8c8';
   ctx.beginPath();
-  ctx.moveTo(-3.5, -2.5);
-  ctx.lineTo(12, 0);
-  ctx.lineTo(-3.5, 2.5);
+  ctx.moveTo(-3.5 * S, -2.5 * S);
+  ctx.lineTo(12 * S, 0);
+  ctx.lineTo(-3.5 * S, 2.5 * S);
   ctx.closePath();
   ctx.fill();
 
-  // Center ridge
   ctx.strokeStyle = '#e0e0e0';
-  ctx.lineWidth = 0.4;
-  ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(11, 0); ctx.stroke();
+  ctx.lineWidth = 0.4 * S;
+  ctx.beginPath(); ctx.moveTo(-3 * S, 0); ctx.lineTo(11 * S, 0); ctx.stroke();
 
-  // Edge highlights
   ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 0.4;
-  ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(10, -0.3); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-2, 2); ctx.lineTo(10, 0.3); ctx.stroke();
+  ctx.lineWidth = 0.4 * S;
+  ctx.beginPath(); ctx.moveTo(-2 * S, -2 * S); ctx.lineTo(10 * S, -0.3 * S); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2 * S, 2 * S); ctx.lineTo(10 * S, 0.3 * S); ctx.stroke();
 
   ctx.restore();
 }
@@ -699,20 +675,20 @@ function spawnArrow() {
   const sx = cx + Math.cos(angle) * arenaR;
   const sy = cy + Math.sin(angle) * arenaR;
   const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.6;
-  const speed = 2 + Math.min(gameTime * 0.015, 4);
+  const speed = (2 + Math.min(gameTime * 0.015, 4)) * scale;
   addArrow(sx, sy, aimAngle, speed);
 }
 
-// ========== Arrow Formation System (ALL STRAIGHT) ==========
+// ========== Arrow Formation System ==========
 
 function formationLine() {
   const baseAngle = Math.random() * Math.PI * 2;
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
   const aimAngle = Math.atan2(cy - baseY, cx - baseX) + (Math.random() - 0.5) * 0.15;
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   const perpAngle = baseAngle + Math.PI / 2;
-  const spacing = 18;
+  const spacing = 18 * scale;
   const count = 10;
   for (let i = 0; i < count; i++) {
     const offset = (i - (count - 1) / 2) * spacing;
@@ -727,7 +703,7 @@ function formationFan() {
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
   const centerAim = Math.atan2(cy - baseY, cx - baseX);
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   const count = 12;
   const spread = 0.6;
   for (let i = 0; i < count; i++) {
@@ -737,9 +713,9 @@ function formationFan() {
 }
 
 function formationCross() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 2.5);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 2.5)) * scale;
   const dirs = [0, Math.PI / 2, Math.PI, Math.PI * 3 / 2];
-  const spacing = 18;
+  const spacing = 18 * scale;
   const count = 8;
   for (const dir of dirs) {
     const baseX = cx + Math.cos(dir) * arenaR;
@@ -756,7 +732,7 @@ function formationCross() {
 }
 
 function formationCircle() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 2.5);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 2.5)) * scale;
   const count = 16;
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i;
@@ -767,7 +743,7 @@ function formationCircle() {
 }
 
 function formationSpin() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   const baseAngle = gameTime * 1.5;
   const count = 8;
   for (let i = 0; i < count; i++) {
@@ -779,7 +755,7 @@ function formationSpin() {
 }
 
 function formationCrossWeave() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 2.5);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 2.5)) * scale;
   const angle1 = Math.random() * Math.PI * 2;
   const angle2 = angle1 + Math.PI / 2;
   [angle1, angle2].forEach(baseAngle => {
@@ -788,7 +764,7 @@ function formationCrossWeave() {
     const oppX = cx + Math.cos(baseAngle + Math.PI) * arenaR;
     const oppY = cy + Math.sin(baseAngle + Math.PI) * arenaR;
     const perpAngle = baseAngle + Math.PI / 2;
-    const spacing = 30;
+    const spacing = 30 * scale;
     const count = 5;
     for (let i = 0; i < count; i++) {
       const offset = (i - (count - 1) / 2) * spacing;
@@ -803,7 +779,7 @@ function formationCrossWeave() {
 }
 
 function formationPulse() {
-  const baseSpeed = 2 + Math.min(gameTime * 0.01, 2.5);
+  const baseSpeed = (2 + Math.min(gameTime * 0.01, 2.5)) * scale;
   const count = 24;
   const pulseCount = 3;
   for (let p = 0; p < pulseCount; p++) {
@@ -819,19 +795,19 @@ function formationPulse() {
 }
 
 function formationVShape() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   const baseAngle = Math.random() * Math.PI * 2;
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
   const centerAim = Math.atan2(cy - baseY, cx - baseX);
+  const perpAngle = baseAngle + Math.PI / 2;
   const armLen = 5;
   addArrow(baseX, baseY, centerAim, speed * 1.1);
   for (let arm = 0; arm < 2; arm++) {
     const dir = arm === 0 ? 1 : -1;
-    const perpAngle = baseAngle + Math.PI / 2;
     for (let i = 1; i <= armLen; i++) {
-      const backOffset = i * 14;
-      const sideOffset = i * 12 * dir;
+      const backOffset = i * 14 * scale;
+      const sideOffset = i * 12 * scale * dir;
       const sx = baseX - Math.cos(centerAim) * backOffset + Math.cos(perpAngle) * sideOffset;
       const sy = baseY - Math.sin(centerAim) * backOffset + Math.sin(perpAngle) * sideOffset;
       const dx = sx - cx, dy = sy - cy;
@@ -841,13 +817,13 @@ function formationVShape() {
         fx = cx + (dx / dist) * arenaR;
         fy = cy + (dy / dist) * arenaR;
       }
-      addArrow(fx, fy, centerAim + (Math.random() - 0.5) * 0.03, speed - i * 0.1);
+      addArrow(fx, fy, centerAim + (Math.random() - 0.5) * 0.03, speed - i * 0.1 * scale);
     }
   }
 }
 
 function formationStorm() {
-  const speed = 3 + Math.min(gameTime * 0.015, 3);
+  const speed = (3 + Math.min(gameTime * 0.015, 3)) * scale;
   const count = 20;
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -858,12 +834,11 @@ function formationStorm() {
   }
 }
 
-// NEW: Two lines from opposite sides
 function formationDoubleLine() {
   const baseAngle = Math.random() * Math.PI * 2;
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   const perpAngle = baseAngle + Math.PI / 2;
-  const spacing = 18;
+  const spacing = 18 * scale;
   const count = 8;
   for (let side = 0; side < 2; side++) {
     const angle = baseAngle + side * Math.PI;
@@ -879,13 +854,12 @@ function formationDoubleLine() {
   }
 }
 
-// NEW: Six-direction cross
 function formationDoubleCross() {
-  const speed = 2.5 + Math.min(gameTime * 0.012, 2.5);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 2.5)) * scale;
   const baseRotation = Math.random() * Math.PI / 6;
   const dirs = [];
   for (let i = 0; i < 6; i++) dirs.push(baseRotation + (Math.PI / 3) * i);
-  const spacing = 15;
+  const spacing = 15 * scale;
   const count = 6;
   for (const dir of dirs) {
     const baseX = cx + Math.cos(dir) * arenaR;
@@ -923,26 +897,24 @@ function spawnFormation() {
   if (formations.length === 0) return;
   const fn = formations[Math.floor(Math.random() * formations.length)];
   fn();
-
   if (gameTime > 60 && Math.random() < 0.4) {
     const fn2 = formations[Math.floor(Math.random() * formations.length)];
     fn2();
   }
-
   if (gameTime > 90 && Math.random() < 0.3) {
     const fn3 = formations[Math.floor(Math.random() * formations.length)];
     fn3();
   }
 }
 
-// ========== Curved Blade System (弯刀, 45s) ==========
+// ========== Curved Blade System ==========
 
 function spawnBlade() {
   const angle = Math.random() * Math.PI * 2;
   const sx = cx + Math.cos(angle) * arenaR;
   const sy = cy + Math.sin(angle) * arenaR;
   const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.4;
-  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const speed = (2.5 + Math.min(gameTime * 0.012, 3)) * scale;
   addBlade(sx, sy, aimAngle, speed);
 }
 
@@ -962,7 +934,7 @@ function bladeFormationScatter() {
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
-    const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
+    const speed = (2.5 + Math.min(gameTime * 0.01, 2.5)) * scale;
     addBlade(sx, sy, aimAngle, speed);
   }
 }
@@ -970,7 +942,7 @@ function bladeFormationScatter() {
 function bladeFormationSpiral() {
   const count = 6;
   const baseAngle = Math.random() * Math.PI * 2;
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2)) * scale;
   for (let i = 0; i < count; i++) {
     const angle = baseAngle + (i / count) * Math.PI * 2;
     const sx = cx + Math.cos(angle) * arenaR;
@@ -982,7 +954,7 @@ function bladeFormationSpiral() {
 }
 
 function bladeFormationCross() {
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2)) * scale;
   const count = 4;
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i;
@@ -996,7 +968,7 @@ function bladeFormationCross() {
 
 function bladeFormationPinwheel() {
   const count = 8;
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2)) * scale;
   const rotDir = Math.random() < 0.5 ? 1 : -1;
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i;
@@ -1010,7 +982,7 @@ function bladeFormationPinwheel() {
 
 function bladeFormationBarrage() {
   const count = 10;
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2)) * scale;
   const baseAngle = Math.random() * Math.PI * 2;
   for (let i = 0; i < count; i++) {
     const angle = baseAngle + (Math.random() - 0.5) * Math.PI * 0.8;
@@ -1022,7 +994,6 @@ function bladeFormationBarrage() {
   }
 }
 
-// S-curve blade formation (blades with alternating exit angles)
 function bladeFormationSCurve() {
   const count = 6;
   const baseAngle = Math.random() * Math.PI * 2;
@@ -1030,9 +1001,9 @@ function bladeFormationSCurve() {
   const baseY = cy + Math.sin(baseAngle) * arenaR;
   const centerAim = Math.atan2(cy - baseY, cx - baseX);
   const perpAngle = baseAngle + Math.PI / 2;
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2)) * scale;
   for (let i = 0; i < count; i++) {
-    const offset = (i - (count - 1) / 2) * 22;
+    const offset = (i - (count - 1) / 2) * 22 * scale;
     const sx = baseX + Math.cos(perpAngle) * offset;
     const sy = baseY + Math.sin(perpAngle) * offset;
     const dir = (i % 2 === 0) ? 1 : -1;
@@ -1041,9 +1012,8 @@ function bladeFormationSCurve() {
   }
 }
 
-// Dual dragon blade formation
 function bladeFormationDualDragon() {
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
+  const speed = (2.5 + Math.min(gameTime * 0.01, 2.5)) * scale;
   const baseAngle = Math.random() * Math.PI * 2;
   const count = 8;
   for (let dragon = 0; dragon < 2; dragon++) {
@@ -1059,14 +1029,14 @@ function bladeFormationDualDragon() {
   }
 }
 
-// ========== Dagger System (匕首, 60s) ==========
+// ========== Dagger System ==========
 
 function spawnDagger() {
   const angle = Math.random() * Math.PI * 2;
   const sx = cx + Math.cos(angle) * arenaR;
   const sy = cy + Math.sin(angle) * arenaR;
   const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.4;
-  const speed = 2.8 + Math.min(gameTime * 0.015, 3);
+  const speed = (2.8 + Math.min(gameTime * 0.015, 3)) * scale;
   addDagger(sx, sy, aimAngle, speed);
 }
 
@@ -1086,7 +1056,7 @@ function daggerFormationScatter() {
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
-    const speed = 2.8 + Math.min(gameTime * 0.01, 2.5);
+    const speed = (2.8 + Math.min(gameTime * 0.01, 2.5)) * scale;
     addDagger(sx, sy, aimAngle, speed);
   }
 }
@@ -1094,7 +1064,7 @@ function daggerFormationScatter() {
 function daggerFormationSpiral() {
   const count = 6;
   const baseAngle = Math.random() * Math.PI * 2;
-  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.8 + Math.min(gameTime * 0.01, 2)) * scale;
   for (let i = 0; i < count; i++) {
     const angle = baseAngle + (i / count) * Math.PI * 2;
     const sx = cx + Math.cos(angle) * arenaR;
@@ -1106,7 +1076,7 @@ function daggerFormationSpiral() {
 }
 
 function daggerFormationCross() {
-  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.8 + Math.min(gameTime * 0.01, 2)) * scale;
   const count = 4;
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i;
@@ -1120,7 +1090,7 @@ function daggerFormationCross() {
 
 function daggerFormationPinwheel() {
   const count = 8;
-  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.8 + Math.min(gameTime * 0.01, 2)) * scale;
   const rotDir = Math.random() < 0.5 ? 1 : -1;
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i;
@@ -1134,7 +1104,7 @@ function daggerFormationPinwheel() {
 
 function daggerFormationBarrage() {
   const count = 12;
-  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const speed = (2.8 + Math.min(gameTime * 0.01, 2)) * scale;
   const baseAngle = Math.random() * Math.PI * 2;
   for (let i = 0; i < count; i++) {
     const angle = baseAngle + (Math.random() - 0.5) * Math.PI * 0.8;
@@ -1161,9 +1131,8 @@ function updateTurningWeapon(w, dt) {
   }
 
   if (w.state === 'decelerate') {
-    const decelFactor = 0.92;
-    w.dx *= decelFactor;
-    w.dy *= decelFactor;
+    w.dx *= 0.92;
+    w.dy *= 0.92;
     w.x += w.dx * dt * 60;
     w.y += w.dy * dt * 60;
     const currentSpeed = Math.sqrt(w.dx * w.dx + w.dy * w.dy);
@@ -1197,11 +1166,10 @@ function updateTurningWeapon(w, dt) {
   }
 
   if (w.state === 'accelerate') {
-    const accelFactor = 1.03;
     const currentSpeed = Math.sqrt(w.dx * w.dx + w.dy * w.dy);
     if (currentSpeed < w.maxSpeed * 0.9) {
-      w.dx *= accelFactor;
-      w.dy *= accelFactor;
+      w.dx *= 1.03;
+      w.dy *= 1.03;
     }
     w.x += w.dx * dt * 60;
     w.y += w.dy * dt * 60;
@@ -1214,34 +1182,32 @@ function updateTurningWeapon(w, dt) {
   }
 }
 
-// ========== Ninja Boss System (黑衣人) ==========
+// ========== Ninja Boss System ==========
 
 function spawnNinja() {
   const edgeAngle = Math.random() * Math.PI * 2;
   const startX = cx + Math.cos(edgeAngle) * arenaR;
   const startY = cy + Math.sin(edgeAngle) * arenaR;
-  // Target: random point inside arena (not too close to edge)
   const targetDist = arenaR * (0.2 + Math.random() * 0.3);
   const targetAngle = Math.random() * Math.PI * 2;
   const targetX = cx + Math.cos(targetAngle) * targetDist;
   const targetY = cy + Math.sin(targetAngle) * targetDist;
-  // Exit direction: away from target through center-ish
   const exitAngle = Math.atan2(targetY - cy, targetX - cx);
-  const exitX = cx + Math.cos(exitAngle) * (arenaR + 30);
-  const exitY = cy + Math.sin(exitAngle) * (arenaR + 30);
+  const exitX = cx + Math.cos(exitAngle) * (arenaR + 30 * scale);
+  const exitY = cy + Math.sin(exitAngle) * (arenaR + 30 * scale);
 
   ninjas.push({
     x: startX, y: startY,
     targetX, targetY,
     exitX, exitY,
-    state: 'entering', // entering -> throwing -> retreating -> done
-    speed: 1.2,
+    state: 'entering',
+    speed: 1.2 * scale,
     throwTimer: 0,
     throwCount: 0,
     maxThrows: 5,
     throwInterval: 2.0,
     elapsed: 0,
-    hitR: PLAYER_HIT_R + 2,
+    hitR: PLAYER_HIT_R + 2 * scale,
   });
 }
 
@@ -1253,7 +1219,7 @@ function updateNinjas(dt) {
     if (n.state === 'entering') {
       const dx = n.targetX - n.x, dy = n.targetY - n.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 3) {
+      if (dist < 3 * scale) {
         n.state = 'throwing';
         n.throwTimer = 0;
       } else {
@@ -1277,7 +1243,7 @@ function updateNinjas(dt) {
     if (n.state === 'retreating') {
       const dx = n.exitX - n.x, dy = n.exitY - n.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 3) {
+      if (dist < 3 * scale) {
         ninjas.splice(i, 1);
         continue;
       }
@@ -1285,7 +1251,6 @@ function updateNinjas(dt) {
       n.y += (dy / dist) * n.speed * 1.3 * dt * 60;
     }
 
-    // Collision with player
     const px = n.x - player.x, py = n.y - player.y;
     if (Math.sqrt(px * px + py * py) < n.hitR + PLAYER_HIT_R) {
       gameOver();
@@ -1297,7 +1262,7 @@ function updateNinjas(dt) {
 function throwShuriken(ninja) {
   const dx = player.x - ninja.x, dy = player.y - ninja.y;
   const angle = Math.atan2(dy, dx);
-  const speed = 3.0;
+  const speed = 3.0 * scale;
   shurikens.push({
     x: ninja.x, y: ninja.y,
     dx: Math.cos(angle) * speed,
@@ -1322,7 +1287,7 @@ function drawShuriken(sh) {
   ctx.restore();
 }
 
-// ========== Smoke Bomb System (烟雾弹) ==========
+// ========== Smoke Bomb System ==========
 
 function spawnMaskedMan() {
   const edgeAngle = Math.random() * Math.PI * 2;
@@ -1333,14 +1298,14 @@ function spawnMaskedMan() {
   const targetX = cx + Math.cos(targetAngle) * targetDist;
   const targetY = cy + Math.sin(targetAngle) * targetDist;
   const exitAngle = edgeAngle + Math.PI;
-  const exitX = cx + Math.cos(exitAngle) * (arenaR + 40);
-  const exitY = cy + Math.sin(exitAngle) * (arenaR + 40);
+  const exitX = cx + Math.cos(exitAngle) * (arenaR + 40 * scale);
+  const exitY = cy + Math.sin(exitAngle) * (arenaR + 40 * scale);
 
   maskedMen.push({
     x: startX, y: startY,
     targetX, targetY, exitX, exitY,
     state: 'entering',
-    speed: 2.5,
+    speed: 2.5 * scale,
     throwDone: false,
     done: false,
   });
@@ -1352,9 +1317,7 @@ function updateMaskedMen(dt) {
     if (m.state === 'entering') {
       const dx = m.targetX - m.x, dy = m.targetY - m.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 5) {
-        m.state = 'throwing';
-        // Immediately create smoke bomb
+      if (dist < 5 * scale) {
         createSmokeBomb(m.x, m.y);
         m.state = 'retreating';
       } else {
@@ -1365,7 +1328,7 @@ function updateMaskedMen(dt) {
     if (m.state === 'retreating') {
       const dx = m.exitX - m.x, dy = m.exitY - m.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 5) {
+      if (dist < 5 * scale) {
         maskedMen.splice(i, 1);
         continue;
       }
@@ -1378,13 +1341,13 @@ function updateMaskedMen(dt) {
 function createSmokeBomb(x, y) {
   smokeBombs.push({
     x, y,
-    phase: 'explode', // explode -> smoke -> fade -> done
+    phase: 'explode',
     explodeRadius: 0,
-    explodeMaxRadius: 80,
+    explodeMaxRadius: 80 * scale,
     explodeTimer: 0,
     explodeDuration: 0.3,
     smokeRadius: 0,
-    smokeMaxRadius: 120 + Math.random() * 30,
+    smokeMaxRadius: (120 + Math.random() * 30) * scale,
     smokeAlpha: 0,
     smokeTimer: 0,
     smokeDuration: 4.5,
@@ -1393,7 +1356,6 @@ function createSmokeBomb(x, y) {
     particles: [],
     done: false,
   });
-  // Generate smoke particles
   const sb = smokeBombs[smokeBombs.length - 1];
   const count = 25 + Math.floor(Math.random() * 10);
   for (let i = 0; i < count; i++) {
@@ -1402,9 +1364,9 @@ function createSmokeBomb(x, y) {
     sb.particles.push({
       ox: Math.cos(angle) * dist,
       oy: Math.sin(angle) * dist,
-      r: 15 + Math.random() * 30,
-      drift: (Math.random() - 0.5) * 1.2,
-      driftY: (Math.random() - 0.5) * 0.6,
+      r: (15 + Math.random() * 30) * scale,
+      drift: (Math.random() - 0.5) * 1.2 * scale,
+      driftY: (Math.random() - 0.5) * 0.6 * scale,
       phase: Math.random() * Math.PI * 2,
       alphaBase: 0.15 + Math.random() * 0.2,
     });
@@ -1425,7 +1387,6 @@ function updateSmokeBombs(dt) {
       }
     } else if (sb.phase === 'smoke') {
       sb.smokeTimer += dt;
-      // Gentle pulse
       const pulseT = sb.smokeTimer / sb.smokeDuration;
       sb.smokeAlpha = 1 - pulseT * 0.2;
       if (sb.smokeTimer >= sb.smokeDuration) {
@@ -1439,7 +1400,6 @@ function updateSmokeBombs(dt) {
         smokeBombs.splice(i, 1);
       }
     }
-    // Update particles drift
     for (const p of sb.particles) {
       p.ox += p.drift * dt;
       p.oy += p.driftY * dt;
@@ -1449,7 +1409,6 @@ function updateSmokeBombs(dt) {
 
 function drawSmokeBombs() {
   for (const sb of smokeBombs) {
-    // Explode flash
     if (sb.phase === 'explode') {
       const grad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.explodeRadius);
       grad.addColorStop(0, `rgba(255,220,150,${0.8 * (1 - sb.explodeTimer / sb.explodeDuration)})`);
@@ -1460,12 +1419,12 @@ function drawSmokeBombs() {
       ctx.arc(sb.x, sb.y, sb.explodeRadius, 0, Math.PI * 2);
       ctx.fill();
     }
-    // Smoke particles
     if (sb.phase === 'smoke' || sb.phase === 'fade') {
       const alpha = sb.smokeAlpha;
+      const S = scale;
       for (const p of sb.particles) {
-        const px = sb.x + p.ox + Math.sin(gameTime * 0.8 + p.phase) * 3;
-        const py = sb.y + p.oy + Math.cos(gameTime * 0.6 + p.phase) * 2;
+        const px = sb.x + p.ox + Math.sin(gameTime * 0.8 + p.phase) * 3 * S;
+        const py = sb.y + p.oy + Math.cos(gameTime * 0.6 + p.phase) * 2 * S;
         const pAlpha = p.alphaBase * alpha;
         const grad = ctx.createRadialGradient(px, py, 0, px, py, p.r);
         grad.addColorStop(0, `rgba(160,155,145,${pAlpha})`);
@@ -1476,7 +1435,6 @@ function drawSmokeBombs() {
         ctx.arc(px, py, p.r, 0, Math.PI * 2);
         ctx.fill();
       }
-      // Central dense smoke
       const cAlpha = 0.4 * alpha;
       const cGrad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.smokeMaxRadius * 0.7);
       cGrad.addColorStop(0, `rgba(180,175,165,${cAlpha})`);
@@ -1508,8 +1466,8 @@ function update(dt) {
   if (keys['ArrowRight'] || keys['KeyD']) mx += 1;
   if (mx || my) {
     const len = Math.sqrt(mx * mx + my * my);
-    player.x += (mx / len) * PLAYER_SPEED * dt * 60;
-    player.y += (my / len) * PLAYER_SPEED * dt * 60;
+    player.x += (mx / len) * playerSpeed * dt * 60;
+    player.y += (my / len) * playerSpeed * dt * 60;
   }
   const pdx = player.x - cx, pdy = player.y - cy;
   const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
@@ -1573,13 +1531,12 @@ function update(dt) {
     ninjaTimer -= ninjaInterval;
     spawnNinja();
   }
-  // Spawn first ninja immediately at 50s
   if (gameTime >= ninjaStart && gameTime - dt < ninjaStart) {
     spawnNinja();
     ninjaTimer = 0;
   }
 
-  // Smoke bomb: first at 60s, then every 15-20s
+  // Smoke bomb: first at 60s, then every 17s
   smokeTimer += dt;
   const smokeStart = 60;
   const smokeInterval = 17;
@@ -1596,18 +1553,18 @@ function update(dt) {
   updateSmokeBombs(dt);
   updateNinjas(dt);
 
-  // Update arrows (STRAIGHT ONLY)
+  // Update arrows
   for (let i = arrows.length - 1; i >= 0; i--) {
     const a = arrows[i];
     a.x += a.dx * dt * 60;
     a.y += a.dy * dt * 60;
     const adx = a.x - cx, ady = a.y - cy;
-    if (Math.sqrt(adx * adx + ady * ady) > arenaR + 40) {
+    if (Math.sqrt(adx * adx + ady * ady) > arenaR + 40 * scale) {
       arrows.splice(i, 1);
       continue;
     }
     const cx2 = a.x - player.x, cy2 = a.y - player.y;
-    if (Math.sqrt(cx2 * cx2 + cy2 * cy2) < PLAYER_HIT_R + 3) {
+    if (Math.sqrt(cx2 * cx2 + cy2 * cy2) < PLAYER_HIT_R + 3 * scale) {
       gameOver();
       return;
     }
@@ -1618,12 +1575,12 @@ function update(dt) {
     const b = blades[i];
     updateTurningWeapon(b, dt);
     const bdx = b.x - cx, bdy = b.y - cy;
-    if (Math.sqrt(bdx * bdx + bdy * bdy) > arenaR + 40 && b.state === 'exit') {
+    if (Math.sqrt(bdx * bdx + bdy * bdy) > arenaR + 40 * scale && b.state === 'exit') {
       blades.splice(i, 1);
       continue;
     }
     const bcx = b.x - player.x, bcy = b.y - player.y;
-    if (Math.sqrt(bcx * bcx + bcy * bcy) < PLAYER_HIT_R + 4) {
+    if (Math.sqrt(bcx * bcx + bcy * bcy) < PLAYER_HIT_R + 4 * scale) {
       gameOver();
       return;
     }
@@ -1634,12 +1591,12 @@ function update(dt) {
     const d = daggers[i];
     updateTurningWeapon(d, dt);
     const ddx = d.x - cx, ddy = d.y - cy;
-    if (Math.sqrt(ddx * ddx + ddy * ddy) > arenaR + 40 && d.state === 'exit') {
+    if (Math.sqrt(ddx * ddx + ddy * ddy) > arenaR + 40 * scale && d.state === 'exit') {
       daggers.splice(i, 1);
       continue;
     }
     const dcx = d.x - player.x, dcy = d.y - player.y;
-    if (Math.sqrt(dcx * dcx + dcy * dcy) < PLAYER_HIT_R + 4) {
+    if (Math.sqrt(dcx * dcx + dcy * dcy) < PLAYER_HIT_R + 4 * scale) {
       gameOver();
       return;
     }
@@ -1652,12 +1609,12 @@ function update(dt) {
     sh.y += sh.dy * dt * 60;
     sh.rotation += sh.rotSpeed * dt;
     const sdx = sh.x - cx, sdy = sh.y - cy;
-    if (Math.sqrt(sdx * sdx + sdy * sdy) > arenaR + 40) {
+    if (Math.sqrt(sdx * sdx + sdy * sdy) > arenaR + 40 * scale) {
       shurikens.splice(i, 1);
       continue;
     }
     const scx = sh.x - player.x, scy = sh.y - player.y;
-    if (Math.sqrt(scx * scx + scy * scy) < PLAYER_HIT_R + 4) {
+    if (Math.sqrt(scx * scx + scy * scy) < PLAYER_HIT_R + 4 * scale) {
       gameOver();
       return;
     }
@@ -1694,7 +1651,7 @@ function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, 0.05);
   lastTime = ts;
   update(dt);
-  render();
+  if (running) render(); // only render if not game over
   animFrame = requestAnimationFrame(loop);
 }
 
@@ -1714,6 +1671,7 @@ function startGame() {
   arrows = []; blades = []; daggers = []; shurikens = []; ninjas = []; smokeBombs = []; maskedMen = [];
   score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0; ninjaTimer = 0; smokeTimer = 0;
   running = true;
+  gameOverCalled = false;
   paused = false;
   document.getElementById('pauseOverlay').style.display = 'none';
   overlay.classList.remove('active');
@@ -1724,9 +1682,14 @@ function startGame() {
 }
 
 function gameOver() {
+  console.log('[十面埋伏] gameOver() called, gameTime=' + gameTime.toFixed(1) + 's');
+  if (gameOverCalled) return;
+  gameOverCalled = true;
   running = false;
   cancelAnimationFrame(animFrame);
   hud.style.display = 'none';
+  // Render final frame
+  render();
   title.textContent = '十面埋伏';
   const t = gameTime;
   let评语;
