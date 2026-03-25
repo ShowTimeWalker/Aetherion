@@ -2,7 +2,7 @@
   font-family: "Trebuchet MS", "Microsoft YaHei UI", sans-serif;
   color: #2d3748;
   background:
-    radial-gradient(circle at top, rgba(167, 139, 250, 0.08), transparent 36%),
+    radial-gradient(circle at top, rgba(250, 115, 0, 0.08), transparent 36%),
     linear-gradient(180deg, #f8f9fc 0%, #f1f3f8 48%, #e8ebf2 100%);
   color-scheme: light;
   text-rendering: optimizeLegibility;
@@ -10,12 +10,12 @@
   -moz-osx-font-smoothing: grayscale;
   --surface: rgba(255, 255, 255, 0.88);
   --surface-strong: rgba(255, 255, 255, 0.95);
-  --line: rgba(138, 100, 220, 0.15);
-  --line-strong: rgba(138, 100, 220, 0.35);
-  --gold: #9d7435;
-  --gold-deep: #7a5a2a;
-  --accent-purple: #8b5cf6;
-  --accent-blue: #3b82f6;
+  --line: rgba(250, 115, 0, 0.15);
+  --line-strong: rgba(250, 115, 0, 0.35);
+  --gold: #c47a08;
+  --gold-deep: #92650a;
+  --accent-purple: #fa7300;
+  --accent-blue: #f59e0b;
   --text-muted: #5a6274;
   --danger: #dc2626;
 }
@@ -95,11 +95,11 @@ select {
   height: 48px;
   border-radius: 16px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(96, 165, 250, 0.15), rgba(167, 139, 250, 0.2));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 20px rgba(167, 139, 250, 0.2);
+  background: linear-gradient(135deg, rgba(250, 115, 0, 0.2), rgba(245, 158, 11, 0.15), rgba(250, 115, 0, 0.2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 20px rgba(250, 115, 0, 0.2);
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 1.5rem;
-  color: #6b5b95;
+  color: #c47a08;
 }
 
 .topbar__nav {
@@ -113,7 +113,7 @@ select {
 .play-shell__link:hover,
 .hero__actions a:hover,
 .game-card__action:hover {
-  color: #6b5b95;
+  color: #c47a08;
 }
 
 .main {
@@ -170,7 +170,7 @@ select {
 .hero__headline {
   max-width: none;
   white-space: nowrap;
-  color: #8b5cf6;
+  color: #fa7300;
   font-size: clamp(1.35rem, 2vw, 1.9rem);
   line-height: 1.18;
 }
@@ -201,7 +201,7 @@ select {
   padding: 0 18px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.12), rgba(96, 165, 250, 0.08));
+  background: linear-gradient(180deg, rgba(250, 115, 0, 0.12), rgba(245, 158, 11, 0.08));
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -226,9 +226,9 @@ select {
 .play-shell__link:hover,
 .game-card__action:hover {
   transform: translateY(-2px);
-  border-color: rgba(167, 139, 250, 0.6);
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.2), rgba(96, 165, 250, 0.15));
-  box-shadow: 0 8px 20px rgba(167, 139, 250, 0.25);
+  border-color: rgba(250, 115, 0, 0.6);
+  background: linear-gradient(180deg, rgba(250, 115, 0, 0.2), rgba(245, 158, 11, 0.15));
+  box-shadow: 0 8px 20px rgba(250, 115, 0, 0.25);
 }
 
 .hero__actions span {
@@ -238,7 +238,7 @@ select {
 .hero__panel {
   padding: 28px;
   background:
-    linear-gradient(180deg, rgba(167, 139, 250, 0.05), transparent 32%),
+    linear-gradient(180deg, rgba(250, 115, 0, 0.05), transparent 32%),
     var(--surface-strong);
 }
 
@@ -287,7 +287,7 @@ select {
 
 .game-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 24px 60px rgba(167, 139, 250, 0.25),
+  box-shadow: 0 24px 60px rgba(250, 115, 0, 0.25),
               0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
@@ -296,7 +296,7 @@ select {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at top, rgba(167, 139, 250, 0.2), transparent 40%),
+    radial-gradient(circle at top, rgba(250, 115, 0, 0.2), transparent 40%),
     linear-gradient(135deg, #e8ebf5, #f5f7fb 70%);
   background-size: cover;
   background-position: center;
@@ -314,7 +314,7 @@ select {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(96, 165, 250, 0.15));
+  background: linear-gradient(135deg, rgba(250, 115, 0, 0.15), rgba(245, 158, 11, 0.15));
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -326,7 +326,7 @@ select {
 .game-card__monogram {
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 4rem;
-  color: rgba(75, 55, 130, 0.85);
+  color: rgba(196, 122, 8, 0.85);
   transition: transform 0.3s ease, color 0.3s ease;
   position: relative;
   z-index: 1;
@@ -334,7 +334,7 @@ select {
 
 .game-card:hover .game-card__monogram {
   transform: scale(1.1);
-  color: rgba(75, 55, 130, 1);
+  color: rgba(196, 122, 8, 1);
 }
 
 .game-card__body {
