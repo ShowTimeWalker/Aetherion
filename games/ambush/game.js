@@ -1003,6 +1003,80 @@ function gameOver() {
   startBtn.textContent = '再来一次';
   overlay.style.display = 'flex';
   overlay.classList.add('active');
+
+  // Submit score to leaderboard
+  submitScore(score, gameTime);
+}
+
+// ========== Leaderboard ==========
+
+function getToken() {
+  try { return JSON.parse(localStorage.getItem('aetherion_auth') || '{}').token; } catch { return null; }
+}
+
+function getUsername() {
+  try { return JSON.parse(localStorage.getItem('aetherion_auth') || '{}').username; } catch { return null; }
+}
+
+async function submitScore(score, time) {
+  const token = getToken();
+  const rankMsg = document.getElementById('rankMsg');
+  if (!token) {
+    rankMsg.style.display = 'block';
+    rankMsg.textContent = '登录后可记录成绩到排行榜';
+    return;
+  }
+  try {
+    const res = await fetch('http://localhost:3456/api/leaderboard/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ score, time }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      rankMsg.style.display = 'block';
+      rankMsg.textContent = data.message;
+    }
+  } catch { /* silently fail */ }
+}
+
+async function showLeaderboard() {
+  const modal = document.getElementById('leaderboardModal');
+  const content = document.getElementById('lbContent');
+  modal.style.display = 'flex';
+  content.innerHTML = '<p style="color:#807060">加载中...</p>';
+
+  try {
+    const res = await fetch('http://localhost:3456/api/leaderboard?limit=20');
+    const { leaderboard } = await res.json();
+    if (!leaderboard.length) { content.innerHTML = '<p style="color:#807060">暂无记录</p>'; return; }
+
+    const username = getUsername();
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <tr style="color:#a09070;border-bottom:1px solid #3a3020">
+        <th style="padding:0.5rem;text-align:center;width:50px">排名</th>
+        <th style="padding:0.5rem;text-align:left">侠客</th>
+        <th style="padding:0.5rem;text-align:right">分数</th>
+        <th style="padding:0.5rem;text-align:right">存活</th>
+        <th style="padding:0.5rem;text-align:right">日期</th>
+      </tr>`;
+    leaderboard.forEach((e, i) => {
+      const isMe = e.username === username;
+      const style = isMe ? 'background:rgba(200,160,60,0.12);color:#e0c060' : '';
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+      html += `<tr style="${style};border-bottom:1px solid #1a1810">
+        <td style="padding:0.45rem;text-align:center">${medal}</td>
+        <td style="padding:0.45rem;text-align:left${isMe ? ';font-weight:bold' : ''}">${e.username}</td>
+        <td style="padding:0.45rem;text-align:right;color:#c8a030">${e.score}</td>
+        <td style="padding:0.45rem;text-align:right">${e.time}s</td>
+        <td style="padding:0.45rem;text-align:right;color:#807060">${e.date || ''}</td>
+      </tr>`;
+    });
+    html += '</table>';
+    content.innerHTML = html;
+  } catch {
+    content.innerHTML = '<p style="color:#807060">无法加载排行榜</p>';
+  }
 }
 
 window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
