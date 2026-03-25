@@ -106,6 +106,8 @@ select {
   display: flex;
   gap: 18px;
   color: var(--text-muted);
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .topbar__nav a:hover,
