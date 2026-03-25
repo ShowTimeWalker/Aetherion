@@ -10,7 +10,7 @@ const subtitle = document.getElementById('subtitle');
 const startBtn = document.getElementById('startBtn');
 
 let W, H, cx, cy, arenaR, playerR;
-const PLAYER_SPEED = 3.5;
+const PLAYER_SPEED = 5.0;
 const ARROW_LEN = 22;
 const ARROW_HEAD = 8;
 const PLAYER_HIT_R = 10;
@@ -21,6 +21,9 @@ let blades = [];
 let daggers = [];
 let shurikens = [];
 let ninjas = [];
+let smokeBombs = [];
+let maskedMen = [];
+let smokeTimer = 0;
 let score = 0;
 let gameTime = 0;
 let running = false;
@@ -34,7 +37,7 @@ let ninjaTimer = 0;
 let keys = {};
 let animFrame;
 
-let playerSprite, arrowSprite, ninjaSprite, shurikenSprite;
+let playerSprite, arrowSprite, ninjaSprite, shurikenSprite, maskedSprite;
 let bambooCache = null;
 
 function createPlayerSprite() {
@@ -254,13 +257,66 @@ function createShurikenSprite() {
   shurikenSprite = c;
 }
 
+function createMaskedSprite() {
+  const size = 48;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const s = size / 2;
+
+  // Dark cloak body (smaller than player)
+  g.fillStyle = '#2a2a2a';
+  g.beginPath();
+  g.moveTo(s, s * 0.6);
+  g.quadraticCurveTo(s * 1.5, s * 1.0, s * 1.25, s * 1.75);
+  g.lineTo(s * 0.75, s * 1.75);
+  g.quadraticCurveTo(s * 0.5, s * 1.0, s, s * 0.6);
+  g.fill();
+  g.strokeStyle = '#444';
+  g.lineWidth = 0.8;
+  g.stroke();
+
+  // Belt
+  g.strokeStyle = '#555';
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.moveTo(s * 0.75, s * 1.15);
+  g.lineTo(s * 1.25, s * 1.15);
+  g.stroke();
+
+  // Black mask (no face visible, just dark oval)
+  g.fillStyle = '#111';
+  g.beginPath(); g.arc(s, s * 0.5, s * 0.2, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#333';
+  g.lineWidth = 0.5;
+  g.stroke();
+
+  // Eye slits (small red dots)
+  g.fillStyle = '#aa3333';
+  g.beginPath(); g.arc(s - s * 0.06, s * 0.48, 1.2, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(s + s * 0.06, s * 0.48, 1.2, 0, Math.PI * 2); g.fill();
+
+  // Hood
+  g.fillStyle = '#1a1a1a';
+  g.beginPath();
+  g.moveTo(s * 0.25, s * 0.55);
+  g.quadraticCurveTo(s, s * 0.2, s * 1.75, s * 0.55);
+  g.quadraticCurveTo(s, s * 0.48, s * 0.25, s * 0.55);
+  g.fill();
+  g.strokeStyle = '#333';
+  g.lineWidth = 0.8;
+  g.stroke();
+
+  maskedSprite = c;
+}
+
 function resize() {
   const s = Math.min(window.innerWidth, window.innerHeight) - 40;
   W = H = s;
   canvas.width = canvas.height = s;
   cx = W / 2;
   cy = H / 2;
-  arenaR = s * 0.44;
+  arenaR = s * 0.88;
   playerR = arenaR * 0.03;
   bambooCache = null;
   if (!running) { player.x = cx; player.y = cy; drawIdle(); }
@@ -1265,6 +1321,179 @@ function drawShuriken(sh) {
   ctx.restore();
 }
 
+// ========== Smoke Bomb System (烟雾弹) ==========
+
+function spawnMaskedMan() {
+  const edgeAngle = Math.random() * Math.PI * 2;
+  const startX = cx + Math.cos(edgeAngle) * arenaR;
+  const startY = cy + Math.sin(edgeAngle) * arenaR;
+  const targetDist = arenaR * (0.15 + Math.random() * 0.45);
+  const targetAngle = Math.random() * Math.PI * 2;
+  const targetX = cx + Math.cos(targetAngle) * targetDist;
+  const targetY = cy + Math.sin(targetAngle) * targetDist;
+  const exitAngle = edgeAngle + Math.PI;
+  const exitX = cx + Math.cos(exitAngle) * (arenaR + 40);
+  const exitY = cy + Math.sin(exitAngle) * (arenaR + 40);
+
+  maskedMen.push({
+    x: startX, y: startY,
+    targetX, targetY, exitX, exitY,
+    state: 'entering',
+    speed: 2.5,
+    throwDone: false,
+    done: false,
+  });
+}
+
+function updateMaskedMen(dt) {
+  for (let i = maskedMen.length - 1; i >= 0; i--) {
+    const m = maskedMen[i];
+    if (m.state === 'entering') {
+      const dx = m.targetX - m.x, dy = m.targetY - m.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 5) {
+        m.state = 'throwing';
+        // Immediately create smoke bomb
+        createSmokeBomb(m.x, m.y);
+        m.state = 'retreating';
+      } else {
+        m.x += (dx / dist) * m.speed * dt * 60;
+        m.y += (dy / dist) * m.speed * dt * 60;
+      }
+    }
+    if (m.state === 'retreating') {
+      const dx = m.exitX - m.x, dy = m.exitY - m.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 5) {
+        maskedMen.splice(i, 1);
+        continue;
+      }
+      m.x += (dx / dist) * m.speed * 1.8 * dt * 60;
+      m.y += (dy / dist) * m.speed * 1.8 * dt * 60;
+    }
+  }
+}
+
+function createSmokeBomb(x, y) {
+  smokeBombs.push({
+    x, y,
+    phase: 'explode', // explode -> smoke -> fade -> done
+    explodeRadius: 0,
+    explodeMaxRadius: 30,
+    explodeTimer: 0,
+    explodeDuration: 0.3,
+    smokeRadius: 0,
+    smokeMaxRadius: 50 + Math.random() * 20,
+    smokeAlpha: 0,
+    smokeTimer: 0,
+    smokeDuration: 4.5,
+    fadeTimer: 0,
+    fadeDuration: 1.0,
+    particles: [],
+    done: false,
+  });
+  // Generate smoke particles
+  const sb = smokeBombs[smokeBombs.length - 1];
+  const count = 12 + Math.floor(Math.random() * 8);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * sb.smokeMaxRadius * 0.8;
+    sb.particles.push({
+      ox: Math.cos(angle) * dist,
+      oy: Math.sin(angle) * dist,
+      r: 8 + Math.random() * 18,
+      drift: (Math.random() - 0.5) * 0.8,
+      driftY: (Math.random() - 0.5) * 0.4,
+      phase: Math.random() * Math.PI * 2,
+      alphaBase: 0.15 + Math.random() * 0.2,
+    });
+  }
+}
+
+function updateSmokeBombs(dt) {
+  for (let i = smokeBombs.length - 1; i >= 0; i--) {
+    const sb = smokeBombs[i];
+    if (sb.phase === 'explode') {
+      sb.explodeTimer += dt;
+      const t = Math.min(sb.explodeTimer / sb.explodeDuration, 1);
+      sb.explodeRadius = sb.explodeMaxRadius * t;
+      if (t >= 1) {
+        sb.phase = 'smoke';
+        sb.smokeRadius = sb.smokeMaxRadius;
+        sb.smokeAlpha = 1;
+      }
+    } else if (sb.phase === 'smoke') {
+      sb.smokeTimer += dt;
+      // Gentle pulse
+      const pulseT = sb.smokeTimer / sb.smokeDuration;
+      sb.smokeAlpha = 1 - pulseT * 0.2;
+      if (sb.smokeTimer >= sb.smokeDuration) {
+        sb.phase = 'fade';
+      }
+    } else if (sb.phase === 'fade') {
+      sb.fadeTimer += dt;
+      const t = Math.min(sb.fadeTimer / sb.fadeDuration, 1);
+      sb.smokeAlpha = (1 - t) * 0.8;
+      if (t >= 1) {
+        smokeBombs.splice(i, 1);
+      }
+    }
+    // Update particles drift
+    for (const p of sb.particles) {
+      p.ox += p.drift * dt;
+      p.oy += p.driftY * dt;
+    }
+  }
+}
+
+function drawSmokeBombs() {
+  for (const sb of smokeBombs) {
+    // Explode flash
+    if (sb.phase === 'explode') {
+      const grad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.explodeRadius);
+      grad.addColorStop(0, `rgba(255,220,150,${0.8 * (1 - sb.explodeTimer / sb.explodeDuration)})`);
+      grad.addColorStop(0.5, `rgba(200,180,120,${0.4 * (1 - sb.explodeTimer / sb.explodeDuration)})`);
+      grad.addColorStop(1, 'rgba(150,130,80,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sb.x, sb.y, sb.explodeRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Smoke particles
+    if (sb.phase === 'smoke' || sb.phase === 'fade') {
+      const alpha = sb.smokeAlpha;
+      for (const p of sb.particles) {
+        const px = sb.x + p.ox + Math.sin(gameTime * 0.8 + p.phase) * 3;
+        const py = sb.y + p.oy + Math.cos(gameTime * 0.6 + p.phase) * 2;
+        const pAlpha = p.alphaBase * alpha;
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, p.r);
+        grad.addColorStop(0, `rgba(160,155,145,${pAlpha})`);
+        grad.addColorStop(0.6, `rgba(140,135,125,${pAlpha * 0.6})`);
+        grad.addColorStop(1, 'rgba(120,115,105,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Central dense smoke
+      const cAlpha = 0.25 * alpha;
+      const cGrad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.smokeMaxRadius * 0.5);
+      cGrad.addColorStop(0, `rgba(180,175,165,${cAlpha})`);
+      cGrad.addColorStop(1, 'rgba(150,145,135,0)');
+      ctx.fillStyle = cGrad;
+      ctx.beginPath();
+      ctx.arc(sb.x, sb.y, sb.smokeMaxRadius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawMaskedMan(m) {
+  if (!maskedSprite) return;
+  const sz = playerR * 3.2;
+  ctx.drawImage(maskedSprite, m.x - sz / 2, m.y - sz / 2, sz, sz);
+}
+
 // ========== Main Update ==========
 
 function update(dt) {
@@ -1349,6 +1578,21 @@ function update(dt) {
     ninjaTimer = 0;
   }
 
+  // Smoke bomb: first at 60s, then every 15-20s
+  smokeTimer += dt;
+  const smokeStart = 60;
+  const smokeInterval = 17;
+  if (gameTime >= smokeStart && smokeTimer >= smokeInterval) {
+    smokeTimer -= smokeInterval;
+    spawnMaskedMan();
+  }
+  if (gameTime >= smokeStart && gameTime - dt < smokeStart) {
+    spawnMaskedMan();
+    smokeTimer = 0;
+  }
+
+  updateMaskedMen(dt);
+  updateSmokeBombs(dt);
   updateNinjas(dt);
 
   // Update arrows (STRAIGHT ONLY)
@@ -1434,6 +1678,8 @@ function render() {
   for (const d of daggers) drawDagger(d);
   for (const n of ninjas) drawNinja(n);
   for (const sh of shurikens) drawShuriken(sh);
+  for (const m of maskedMen) drawMaskedMan(m);
+  drawSmokeBombs();
   drawPlayer();
 }
 
@@ -1464,8 +1710,8 @@ function togglePause() {
 
 function startGame() {
   player.x = cx; player.y = cy;
-  arrows = []; blades = []; daggers = []; shurikens = []; ninjas = [];
-  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0; ninjaTimer = 0;
+  arrows = []; blades = []; daggers = []; shurikens = []; ninjas = []; smokeBombs = []; maskedMen = [];
+  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0; ninjaTimer = 0; smokeTimer = 0;
   running = true;
   paused = false;
   document.getElementById('pauseOverlay').style.display = 'none';
@@ -1563,4 +1809,5 @@ createPlayerSprite();
 createArrowSprite();
 createNinjaSprite();
 createShurikenSprite();
+createMaskedSprite();
 resize();
