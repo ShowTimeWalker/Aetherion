@@ -4,6 +4,7 @@ export interface GameEntry {
   description: string;
   cover?: string;
   playUrl: string;
+  version?: string;
 }
 
 let manifestPromise: Promise<GameEntry[]> | null = null;

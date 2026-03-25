@@ -339,6 +339,19 @@ select {
   color: rgba(180, 83, 9, 1);
 }
 
+.game-card__version {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
 .game-card__body {
   padding: 22px;
 }

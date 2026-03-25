@@ -1,5 +1,6 @@
 {
   "slug": "flappy-bird",
   "title": "Flappy Bird",
-  "description": "点击或按空格振翅穿过管道，尽量飞得更远。"
+  "description": "点击或按空格振翅穿过管道，尽量飞得更远。",
+  "version": "1.0.0"
 }

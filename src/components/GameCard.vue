@@ -15,6 +15,7 @@ defineProps<{
       <span v-if="!game.cover" class="game-card__monogram">
         {{ game.title.slice(0, 1) }}
       </span>
+      <span v-if="game.version" class="game-card__version">v{{ game.version }}</span>
     </div>
 
     <div class="game-card__body">

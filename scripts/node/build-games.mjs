@@ -45,7 +45,8 @@ function readGameEntry(entryDir) {
     title: parsedMeta.title ?? slug,
     description: parsedMeta.description ?? "",
     cover: toPublicPath(slug, parsedMeta.cover),
-    playUrl: `/games/${slug}/index.html`
+    playUrl: `/games/${slug}/index.html`,
+    version: parsedMeta.version ?? "1.0.0"
   };
 }
 
