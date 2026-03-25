@@ -171,7 +171,7 @@ select {
   max-width: none;
   white-space: nowrap;
   color: #d97706;
-  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700;
   line-height: 1.18;
 }
 
