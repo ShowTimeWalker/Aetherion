@@ -19,7 +19,7 @@ const AudioSystem = (() => {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state === 'suspended') ctx.resume();
       masterGain = ctx.createGain();
-      masterGain.gain.value = 0.7;
+      masterGain.gain.value = 1.0;
       masterGain.connect(ctx.destination);
 
       musicGain = ctx.createGain();
@@ -170,87 +170,37 @@ const AudioSystem = (() => {
 
   function startMusic() {
     if (musicPlaying || !ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-    musicPlaying = true;
-    setTimeout(() => playMusicPhrase(), 200);
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => { musicPlaying = true; playMusicPhrase(); });
+    } else {
+      musicPlaying = true;
+      playMusicPhrase();
+    }
   }
 
   function playMusicPhrase() {
     if (!musicPlaying || !ctx) return;
 
-    const now = ctx.currentTime + 0.05;
-    const bpm = 168; // Fast tempo
+    const now = ctx.currentTime;
+    const bpm = 168;
     const beatDur = 60 / bpm;
     const noteDur = beatDur * 0.8;
-    const vol = 0.35;
+    const vol = 0.5;
 
-    // Generate a fast-paced phrase
-    const phrases = [
-      // Phrase 1: Ascending flute with guzheng rhythm
-      () => {
-        for (let i = 0; i < 8; i++) {
-          const scale = i < 4 ? PENTA : PENTA_HI;
-          const idx = i < 4 ? i : i - 4;
-          playFlute(scale[idx], now + i * beatDur, noteDur * 1.5, vol);
-          if (i % 2 === 0) playGuzheng(PENTA_LO[Math.floor(Math.random() * 5)], now + i * beatDur, noteDur * 0.6, vol * 0.6);
-        }
-        // Fast guzheng run
-        for (let i = 0; i < 8; i++) {
-          playGuzheng(PENTA_HI[i % 5], now + (8 + i * 0.5) * beatDur, noteDur * 0.4, vol * 0.4);
-        }
-      },
-      // Phrase 2: Descending tension
-      () => {
-        for (let i = 0; i < 8; i++) {
-          const idx = 4 - (i % 5);
-          playFlute(PENTA[idx], now + i * beatDur, noteDur, vol);
-          if (i === 0 || i === 3 || i === 6) playDrum(now + i * beatDur, vol * 0.5);
-        }
-        for (let i = 0; i < 4; i++) {
-          playGuzheng(PENTA[(3 - i) % 5], now + (8 + i) * beatDur, noteDur * 1.2, vol * 0.5);
-        }
-      },
-      // Phrase 3: Rapid arpeggio tension
-      () => {
-        for (let i = 0; i < 16; i++) {
-          const scale = i < 8 ? PENTA : PENTA_HI;
-          playGuzheng(scale[i % 5], now + i * beatDur * 0.5, noteDur * 0.5, vol * 0.45);
-        }
-        for (let i = 0; i < 4; i++) {
-          playFlute(PENTA_HI[i % 5], now + (8 + i * 2) * beatDur * 0.5, noteDur * 2, vol * 0.8);
-        }
-        // Strong drums
-        for (let i = 0; i < 4; i++) {
-          playDrum(now + (8 + i * 2) * beatDur * 0.5, vol * 0.7);
-        }
-      },
-      // Phrase 4: Dramatic flute melody
-      () => {
-        const melody = [0, 2, 4, 3, 1, 3, 4, 2, 0, 4, 3, 1];
-        for (let i = 0; i < melody.length; i++) {
-          const scale = i < 6 ? PENTA : PENTA_HI;
-          playFlute(scale[melody[i]], now + i * beatDur, noteDur * 1.2, vol * 0.9);
-          if (i % 3 === 0) playGuzheng(PENTA_LO[melody[i]], now + i * beatDur, noteDur * 0.8, vol * 0.4);
-          if (i % 4 === 0) playDrum(now + i * beatDur, vol * 0.3);
-        }
-      },
-    ];
-
-    // Play random phrase
-    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-    phrase();
-
-    // Clean up old nodes
-    const oldNodes = [...musicNodes];
-    musicNodes = [];
-    for (const n of oldNodes) {
-      try { n.disconnect(); } catch {}
+    // Simple repeating pentatonic melody loop
+    const melody = [0, 2, 4, 3, 1, 0, 4, 2, 3, 1, 4, 0, 2, 4, 1, 3];
+    for (let i = 0; i < melody.length; i++) {
+      const scale = i % 3 === 0 ? PENTA_LO : (i % 3 === 1 ? PENTA : PENTA_HI);
+      const f = scale[melody[i]];
+      playFlute(f, now + i * beatDur, noteDur * 1.2, vol);
+      if (i % 2 === 0) playGuzheng(scale[(melody[i] + 2) % 5], now + i * beatDur + beatDur * 0.5, noteDur * 0.5, vol * 0.5);
+      if (i % 4 === 0) playDrum(now + i * beatDur, vol * 0.4);
     }
 
-    // Schedule next phrase (12 beats total per phrase)
-    const phraseDuration = 12 * beatDur * 1000;
+    // Schedule next loop
+    const phraseDuration = melody.length * beatDur * 1000;
+    if (musicInterval) clearTimeout(musicInterval);
     musicInterval = setTimeout(() => {
-      musicNodes = [];
       playMusicPhrase();
     }, phraseDuration - 100);
   }
