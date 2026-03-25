@@ -29,7 +29,6 @@ onMounted(async () => {
         在这里探索各种有趣的小游戏，放松一下吧！✨<br />
         每一个游戏都是一次小小的冒险，等你来发现。
       </p>
-
       <p class="hero__eyebrow">Deployment test build: 2026-03-25 10:10 CST</p>
     </div>
   </section>
@@ -39,7 +38,6 @@ onMounted(async () => {
       <p class="section-header__eyebrow">Games</p>
       <h2>可游玩的项目</h2>
     </div>
-    <p>每个游戏都有独立目录，门户只负责展示与入口管理。</p>
   </section>
 
   <section v-if="isLoading" class="status-panel">正在加载游戏清单...</section>
