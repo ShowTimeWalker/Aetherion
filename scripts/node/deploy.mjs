@@ -14,7 +14,7 @@ const allowDirty = args.has("--allow-dirty");
 
 const config = {
   remote: process.env.DEPLOY_REMOTE ?? "origin",
-  branch: process.env.DEPLOY_BRANCH ?? "deploy_gitee",
+  branch: "main",
   serverHost: process.env.DEPLOY_HOST ?? "58.87.71.61",
   serverPort: process.env.DEPLOY_PORT ?? "22",
   serverUser: process.env.DEPLOY_USER ?? "ubuntu",
@@ -39,11 +39,16 @@ assertSshSupport();
 
 logStep("检查当前分支");
 const currentBranch = runCommand("git", ["branch", "--show-current"], { captureStdout: true }).trim();
-const sourceRef = currentBranch || "HEAD";
 
-if (currentBranch && currentBranch !== config.branch) {
-  console.log(`当前分支是 ${currentBranch}，将把当前提交发布到 ${config.remote}/${config.branch}`);
+if (!currentBranch) {
+  fail(`未识别到当前分支，请切换到 ${config.branch} 后再发布`);
 }
+
+if (currentBranch !== config.branch) {
+  fail(`当前分支是 ${currentBranch}，部署分支固定为 ${config.branch}，请切换后再发布`);
+}
+
+const sourceRef = currentBranch;
 
 logStep("检查工作区是否干净");
 const workingTreeStatus = runCommand("git", ["status", "--short"], { captureStdout: true }).trim();
@@ -75,7 +80,7 @@ logStep(`推送 ${sourceRef} -> ${config.remote}/${config.branch}`);
 runCommand("git", ["push", config.remote, `${sourceRef}:${config.branch}`]);
 
 logStep("触发服务器部署");
-runRemoteDeploy(remoteCommand);
+runRemoteDeploy(remoteCommand, config);
 
 console.log("");
 console.log("发布完成。");
@@ -90,10 +95,10 @@ function printHelp() {
   pnpm run deploy -- --dry-run --allow-dirty
 
 默认行为:
-  1. 检查当前分支并确定发布来源
+  1. 检查当前分支，且要求当前分支为 main
   2. 检查工作区是否干净
   3. 执行本地 pnpm build
-  4. 将当前 HEAD 推送到 origin/deploy_gitee
+  4. 将当前分支推送到 origin/main
   5. SSH 登录服务器并执行 scripts/server/deploy.sh
 
 附加参数:
@@ -103,7 +108,6 @@ function printHelp() {
 
 可覆盖环境变量:
   DEPLOY_REMOTE
-  DEPLOY_BRANCH
   DEPLOY_HOST
   DEPLOY_PORT
   DEPLOY_USER
@@ -176,7 +180,7 @@ function runCommand(command, commandArgs, options = {}) {
   return result.stdout ?? "";
 }
 
-function runRemoteDeploy(remoteCommand) {
+function runRemoteDeploy(remoteCommand, currentConfig) {
   if (existsSync(sshConfigPath)) {
     runCommand("python", [
       sshHelperScriptPath,
@@ -204,8 +208,8 @@ function runRemoteDeploy(remoteCommand) {
       "-o",
       "ConnectTimeout=10",
       "-p",
-      config.serverPort,
-      `${config.serverUser}@${config.serverHost}`,
+      currentConfig.serverPort,
+      `${currentConfig.serverUser}@${currentConfig.serverHost}`,
       remoteCommand
     ],
     {
