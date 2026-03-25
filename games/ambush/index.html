@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>十面埋伏</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
+  user-select: none;
+}
+canvas { display: block; }
+#overlay {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #e0d8c0;
+  text-align: center;
+  pointer-events: none;
+}
+#overlay.active { pointer-events: auto; }
+#overlay h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 20px rgba(200,160,60,0.6);
+  letter-spacing: 0.3em;
+}
+#overlay h2 {
+  font-size: 1.4rem;
+  color: #a09880;
+  margin-bottom: 1.5rem;
+  font-weight: normal;
+}
+#overlay .score-display {
+  font-size: 2rem;
+  color: #c8a030;
+  margin-bottom: 1rem;
+}
+#overlay p {
+  color: #807060;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+#startBtn {
+  margin-top: 1.5rem;
+  padding: 0.8rem 2.5rem;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #8b6914, #c8a030);
+  border: none;
+  border-radius: 8px;
+  color: #1a1408;
+  cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+#startBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(200,160,60,0.5);
+}
+#hud {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 2rem;
+  font-size: 1.1rem;
+  color: #c8a030;
+  text-shadow: 0 0 10px rgba(200,160,60,0.4);
+}
+#hud span { min-width: 100px; text-align: center; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <span id="scoreText">分数: 0</span>
+  <span id="timeText">时间: 0s</span>
+</div>
+<div id="overlay" class="active">
+  <h1 id="title">十面埋伏</h1>
+  <h2 id="subtitle">在万箭齐发中求生</h2>
+  <div id="finalScore" class="score-display" style="display:none"></div>
+  <p>方向键 / WASD 移动</p>
+  <p>躲避弓箭，坚持越久分数越高</p>
+  <button id="startBtn" onclick="startGame()">开始挑战</button>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
