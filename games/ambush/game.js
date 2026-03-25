@@ -17,19 +17,20 @@ const PLAYER_HIT_R = 10;
 
 let player = { x: 0, y: 0 };
 let arrows = [];
-let knives = [];
+let blades = [];
+let daggers = [];
 let score = 0;
 let gameTime = 0;
 let running = false;
 let lastTime = 0;
 let spawnTimer = 0;
 let formationTimer = 0;
-let knifeTimer = 0;
+let bladeTimer = 0;
+let daggerTimer = 0;
 let keys = {};
 let animFrame;
 
-// Pre-render sprites
-let playerSprite, arrowSprite, knifeSprite;
+let playerSprite, arrowSprite;
 
 function createPlayerSprite() {
   const size = 64;
@@ -38,14 +39,12 @@ function createPlayerSprite() {
   const g = c.getContext('2d');
   const s = size / 2;
 
-  // Glow
   const glow = g.createRadialGradient(s, s, 0, s, s, s * 0.9);
   glow.addColorStop(0, 'rgba(255,200,100,0.15)');
   glow.addColorStop(1, 'rgba(255,200,100,0)');
   g.fillStyle = glow;
   g.beginPath(); g.arc(s, s, s * 0.9, 0, Math.PI * 2); g.fill();
 
-  // Body (robe)
   g.fillStyle = '#4a3520';
   g.beginPath();
   g.moveTo(s, s * 0.55);
@@ -57,7 +56,6 @@ function createPlayerSprite() {
   g.lineWidth = 1;
   g.stroke();
 
-  // Belt
   g.strokeStyle = '#8b6040';
   g.lineWidth = 2;
   g.beginPath();
@@ -65,19 +63,16 @@ function createPlayerSprite() {
   g.lineTo(s * 1.28, s * 1.15);
   g.stroke();
 
-  // Head
   g.fillStyle = '#e8c898';
   g.beginPath(); g.arc(s, s * 0.48, s * 0.18, 0, Math.PI * 2); g.fill();
   g.strokeStyle = '#c0a070';
   g.lineWidth = 0.5;
   g.stroke();
 
-  // Eyes
   g.fillStyle = '#1a1a1a';
   g.beginPath(); g.arc(s - s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
   g.beginPath(); g.arc(s + s * 0.06, s * 0.46, 1.5, 0, Math.PI * 2); g.fill();
 
-  // Straw hat (斗笠)
   g.fillStyle = '#c8a050';
   g.beginPath();
   g.moveTo(s * 0.15, s * 0.52);
@@ -88,7 +83,6 @@ function createPlayerSprite() {
   g.lineWidth = 1;
   g.stroke();
 
-  // Hat top cone
   g.fillStyle = '#b89040';
   g.beginPath();
   g.moveTo(s * 0.55, s * 0.42);
@@ -100,7 +94,6 @@ function createPlayerSprite() {
   g.lineWidth = 0.8;
   g.stroke();
 
-  // Hat string
   g.strokeStyle = '#8b6040';
   g.lineWidth = 0.8;
   g.beginPath();
@@ -146,61 +139,6 @@ function createArrowSprite() {
   arrowSprite = c;
 }
 
-function createKnifeSprite() {
-  const w = 40, h = 14;
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const g = c.getContext('2d');
-  const cy2 = h / 2;
-
-  // Handle
-  g.fillStyle = '#5a3a20';
-  g.beginPath();
-  g.roundRect(0, cy2 - 3, 14, 6, 2);
-  g.fill();
-  g.strokeStyle = '#7a5a30';
-  g.lineWidth = 0.5;
-  g.stroke();
-
-  // Handle wrap
-  g.strokeStyle = '#8a6a3a';
-  g.lineWidth = 1;
-  for (let i = 3; i < 12; i += 3) {
-    g.beginPath(); g.moveTo(i, cy2 - 3); g.lineTo(i, cy2 + 3); g.stroke();
-  }
-
-  // Guard
-  g.fillStyle = '#a0a0a0';
-  g.fillRect(13, cy2 - 4, 3, 8);
-
-  // Blade
-  g.fillStyle = '#d0d0d0';
-  g.beginPath();
-  g.moveTo(16, cy2 - 2);
-  g.lineTo(w, cy2);
-  g.lineTo(16, cy2 + 2);
-  g.closePath();
-  g.fill();
-
-  // Blade edge highlight
-  g.strokeStyle = '#ffffff';
-  g.lineWidth = 0.5;
-  g.beginPath();
-  g.moveTo(18, cy2 - 1);
-  g.lineTo(w - 2, cy2 - 0.5);
-  g.stroke();
-
-  // Blade center line
-  g.strokeStyle = '#b0b0b0';
-  g.lineWidth = 0.3;
-  g.beginPath();
-  g.moveTo(16, cy2);
-  g.lineTo(w - 1, cy2);
-  g.stroke();
-
-  knifeSprite = c;
-}
-
 function resize() {
   const s = Math.min(window.innerWidth, window.innerHeight) - 40;
   W = H = s;
@@ -239,6 +177,8 @@ function drawPlayer() {
   ctx.drawImage(playerSprite, player.x - sz / 2, player.y - sz / 2, sz, sz);
 }
 
+// ========== Arrow Drawing (straight only) ==========
+
 function drawArrow(a) {
   ctx.save();
   ctx.translate(a.x, a.y);
@@ -263,73 +203,163 @@ function drawArrow(a) {
   ctx.restore();
 }
 
-function drawKnife(k) {
-  ctx.save();
-  ctx.translate(k.x, k.y);
-  ctx.rotate(Math.atan2(k.dy, k.dx));
+// ========== Curved Blade Drawing (弯刀) ==========
 
-  // Trail glow (reddish for danger)
-  ctx.strokeStyle = 'rgba(255,100,100,0.12)';
+function drawBlade(b) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(Math.atan2(b.dy, b.dx));
+
+  // Trail glow (purple tint)
+  ctx.strokeStyle = 'rgba(180,120,255,0.12)';
   ctx.lineWidth = 6;
   ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-10, 0); ctx.stroke();
 
-  // Handle
+  // Handle (wrapped)
   ctx.fillStyle = '#5a3a20';
   ctx.beginPath();
-  ctx.roundRect(-18, -3, 12, 6, 1.5);
+  ctx.roundRect(-16, -4, 12, 8, 2);
   ctx.fill();
+  ctx.strokeStyle = '#7a5a30';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
 
-  // Guard
-  ctx.fillStyle = '#a0a0a0';
-  ctx.fillRect(-6, -4, 2.5, 8);
+  // Handle wrap
+  ctx.strokeStyle = '#8a6a3a';
+  ctx.lineWidth = 0.8;
+  for (let i = -14; i < -6; i += 2.5) {
+    ctx.beginPath(); ctx.moveTo(i, -4); ctx.lineTo(i, 4); ctx.stroke();
+  }
 
-  // Blade
+  // Guard (metal connector)
+  ctx.fillStyle = '#b0b0b0';
+  ctx.beginPath();
+  ctx.roundRect(-4, -5, 4, 10, 1);
+  ctx.fill();
+  ctx.strokeStyle = '#909090';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Curved blade (arc shape - streamlined double edge)
   ctx.fillStyle = '#d0d0d0';
   ctx.beginPath();
-  ctx.moveTo(-3.5, -2.5);
-  ctx.lineTo(16, 0);
-  ctx.lineTo(-3.5, 2.5);
+  ctx.moveTo(0, -4);
+  ctx.quadraticCurveTo(10, -9, 20, -1.5);
+  ctx.lineTo(20, 1.5);
+  ctx.quadraticCurveTo(10, 9, 0, 4);
   ctx.closePath();
   ctx.fill();
 
-  // Blade highlight
+  // Edge highlight (top)
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
   ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.moveTo(-2, -1.5); ctx.lineTo(14, -0.5); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(1, -3.5);
+  ctx.quadraticCurveTo(10, -8, 19, -1);
+  ctx.stroke();
+
+  // Center ridge
+  ctx.strokeStyle = '#b0b0b0';
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(12, 1, 19, 0);
+  ctx.stroke();
 
   ctx.restore();
 }
 
-function addArrow(sx, sy, aimAngle, speed, opts = {}) {
+// ========== Dagger Drawing (匕首) ==========
+
+function drawDagger(d) {
+  ctx.save();
+  ctx.translate(d.x, d.y);
+  ctx.rotate(Math.atan2(d.dy, d.dx));
+
+  // Trail glow (reddish)
+  ctx.strokeStyle = 'rgba(255,80,80,0.1)';
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-8, 0); ctx.stroke();
+
+  // Handle
+  ctx.fillStyle = '#4a2a15';
+  ctx.beginPath();
+  ctx.roundRect(-14, -2.5, 8, 5, 1.5);
+  ctx.fill();
+
+  // Handle wrap
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 0.6;
+  for (let i = -12; i < -8; i += 2) {
+    ctx.beginPath(); ctx.moveTo(i, -2.5); ctx.lineTo(i, 2.5); ctx.stroke();
+  }
+
+  // Guard
+  ctx.fillStyle = '#a0a0a0';
+  ctx.fillRect(-6, -3.5, 2.5, 7);
+
+  // Short blade (double-edged)
+  ctx.fillStyle = '#c8c8c8';
+  ctx.beginPath();
+  ctx.moveTo(-3.5, -2.5);
+  ctx.lineTo(12, 0);
+  ctx.lineTo(-3.5, 2.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Center ridge
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(11, 0); ctx.stroke();
+
+  // Edge highlights
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(10, -0.3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2, 2); ctx.lineTo(10, 0.3); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ========== Weapon Creation ==========
+
+function addArrow(sx, sy, aimAngle, speed) {
   arrows.push({
     x: sx, y: sy,
     dx: Math.cos(aimAngle) * speed,
     dy: Math.sin(aimAngle) * speed,
     speed,
-    curve: opts.curve || 0,    // curvature: radians per frame to turn
-    turnTimer: opts.turnTimer || 0,
-    bounced: false,
-    bounceSpeed: opts.bounceSpeed || 0,
   });
 }
 
-function addKnife(sx, sy, aimAngle, speed, opts = {}) {
-  // turnPhase: when to turn (fraction of journey 0-1), turnRate: how fast to curve
-  const targetX = cx + (Math.random() - 0.5) * arenaR * 0.5;
-  const targetY = cy + (Math.random() - 0.5) * arenaR * 0.5;
-  knives.push({
+function addBlade(sx, sy, aimAngle, speed, opts = {}) {
+  blades.push({
     x: sx, y: sy,
     dx: Math.cos(aimAngle) * speed,
     dy: Math.sin(aimAngle) * speed,
     speed,
     maxSpeed: speed,
-    // Turning state machine
-    state: 'approach',  // approach -> decelerate -> turning -> accelerate -> exit
-    turnProgress: 0,    // 0-1 how far through the turn
-    turnDuration: 0.6 + Math.random() * 0.4, // seconds for full turn
+    state: 'approach',
+    turnProgress: 0,
+    turnDuration: 0.6 + Math.random() * 0.4,
     originalAngle: aimAngle,
     exitAngle: opts.exitAngle != null ? opts.exitAngle : aimAngle + Math.PI + (Math.random() - 0.5) * 1.2,
-    turnStarted: false,
+    elapsed: 0,
+  });
+}
+
+function addDagger(sx, sy, aimAngle, speed, opts = {}) {
+  daggers.push({
+    x: sx, y: sy,
+    dx: Math.cos(aimAngle) * speed,
+    dy: Math.sin(aimAngle) * speed,
+    speed,
+    maxSpeed: speed,
+    state: 'approach',
+    turnProgress: 0,
+    turnDuration: 0.5 + Math.random() * 0.3,
+    originalAngle: aimAngle,
+    exitAngle: opts.exitAngle != null ? opts.exitAngle : aimAngle + Math.PI + (Math.random() - 0.5) * 1.2,
     elapsed: 0,
   });
 }
@@ -343,7 +373,7 @@ function spawnArrow() {
   addArrow(sx, sy, aimAngle, speed);
 }
 
-// ========== Arrow Formation System ==========
+// ========== Arrow Formation System (ALL STRAIGHT) ==========
 
 function formationLine() {
   const baseAngle = Math.random() * Math.PI * 2;
@@ -442,111 +472,6 @@ function formationCrossWeave() {
   });
 }
 
-// ========== NEW Arrow Formations ==========
-
-// 螺旋射箭: arrows spiral inward from the edge
-function formationSpiral() {
-  const speed = 2 + Math.min(gameTime * 0.01, 2.5);
-  const count = 20;
-  const startAngle = Math.random() * Math.PI * 2;
-  const curveDir = Math.random() < 0.5 ? 1 : -1;
-  for (let i = 0; i < count; i++) {
-    const angle = startAngle + (i / count) * Math.PI * 3;
-    const sx = cx + Math.cos(angle) * arenaR;
-    const sy = cy + Math.sin(angle) * arenaR;
-    const toCenter = Math.atan2(cy - sy, cx - sx);
-    // Aim slightly off-center with curvature toward center
-    const aimAngle = toCenter + curveDir * 0.5;
-    addArrow(sx, sy, aimAngle, speed, { curve: curveDir * 0.015 });
-  }
-}
-
-// S型射箭: arrows follow S-curve paths
-function formationSCurve() {
-  const speed = 2.2 + Math.min(gameTime * 0.01, 2);
-  const count = 6;
-  const baseAngle = Math.random() * Math.PI * 2;
-  const baseX = cx + Math.cos(baseAngle) * arenaR;
-  const baseY = cy + Math.sin(baseAngle) * arenaR;
-  const centerAim = Math.atan2(cy - baseY, cx - baseX);
-  const perpAngle = baseAngle + Math.PI / 2;
-  for (let i = 0; i < count; i++) {
-    const offset = (i - (count - 1) / 2) * 22;
-    const sx = baseX + Math.cos(perpAngle) * offset;
-    const sy = baseY + Math.sin(perpAngle) * offset;
-    const curveDir = (i % 2 === 0) ? 0.018 : -0.018;
-    // Use a timer to flip curvature after some time
-    addArrow(sx, sy, centerAim + (Math.random() - 0.5) * 0.08, speed, {
-      curve: curveDir,
-      turnTimer: 80 + Math.random() * 30, // frames until curve reverses
-    });
-  }
-}
-
-// 双龙出海: two symmetric arc groups from opposite corners
-function formationDualDragon() {
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
-  const baseAngle = Math.random() * Math.PI * 2;
-  const count = 8;
-  for (let dragon = 0; dragon < 2; dragon++) {
-    const dir = dragon === 0 ? 1 : -1;
-    for (let i = 0; i < count; i++) {
-      const angle = baseAngle + dir * (i * 0.15);
-      const sx = cx + Math.cos(angle) * arenaR;
-      const sy = cy + Math.sin(angle) * arenaR;
-      const toCenter = Math.atan2(cy - sy, cx - sx);
-      addArrow(sx, sy, toCenter + dir * 0.4, speed, { curve: -dir * 0.012 });
-    }
-  }
-}
-
-// 万花筒: rotational symmetry pattern
-function formationKaleidoscope() {
-  const speed = 2.2 + Math.min(gameTime * 0.01, 2);
-  const arms = 5 + Math.floor(Math.random() * 3);
-  const arrowsPerArm = 3;
-  const baseRotation = Math.random() * Math.PI * 2;
-  const curveDir = Math.random() < 0.5 ? 1 : -1;
-  for (let arm = 0; arm < arms; arm++) {
-    const armAngle = baseRotation + (Math.PI * 2 / arms) * arm;
-    for (let i = 0; i < arrowsPerArm; i++) {
-      const delay = i * 0.12;
-      const angle = armAngle + i * 0.15;
-      const sx = cx + Math.cos(angle) * arenaR;
-      const sy = cy + Math.sin(angle) * arenaR;
-      const toCenter = Math.atan2(cy - sy, cx - sx);
-      addArrow(sx, sy, toCenter + curveDir * (0.3 + i * 0.1), speed * (0.9 + i * 0.05), { curve: curveDir * 0.01 });
-    }
-  }
-}
-
-// 弹跳箭: arrows that bounce when reaching center area
-function formationBounce() {
-  const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
-  const count = 10;
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.2;
-    const sx = cx + Math.cos(angle) * arenaR;
-    const sy = cy + Math.sin(angle) * arenaR;
-    // Aim at a point near center (not exactly center)
-    const targetOffset = (Math.random() - 0.5) * arenaR * 0.3;
-    const perpAngle = angle + Math.PI / 2;
-    const targetX = cx + Math.cos(perpAngle) * targetOffset;
-    const targetY = cy + Math.sin(perpAngle) * targetOffset;
-    const aimAngle = Math.atan2(targetY - sy, targetX - sx);
-    // After reaching near center, arrow bounces in a new direction
-    const bounceAngle = angle + Math.PI + (Math.random() - 0.5) * 0.8;
-    addArrow(sx, sy, aimAngle, speed, {
-      bounced: false,
-      bounceSpeed: speed * 0.8,
-    });
-    // Set bounce angle on the arrow
-    arrows[arrows.length - 1].bounceAngle = bounceAngle;
-    arrows[arrows.length - 1].bounceDist = arenaR * (0.15 + Math.random() * 0.15);
-  }
-}
-
-// 脉冲波: ring of arrows with varying speeds creating a wave
 function formationPulse() {
   const baseSpeed = 2 + Math.min(gameTime * 0.01, 2.5);
   const count = 24;
@@ -563,28 +488,22 @@ function formationPulse() {
   }
 }
 
-// V字雁阵: V-shaped formation from one side
 function formationVShape() {
   const speed = 2.5 + Math.min(gameTime * 0.012, 3);
   const baseAngle = Math.random() * Math.PI * 2;
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
   const centerAim = Math.atan2(cy - baseY, cx - baseX);
-  const armLen = 5; // arrows per arm
-
-  // Lead arrow
+  const armLen = 5;
   addArrow(baseX, baseY, centerAim, speed * 1.1);
-
   for (let arm = 0; arm < 2; arm++) {
     const dir = arm === 0 ? 1 : -1;
     const perpAngle = baseAngle + Math.PI / 2;
     for (let i = 1; i <= armLen; i++) {
-      // V shape: backward and to the side
       const backOffset = i * 14;
       const sideOffset = i * 12 * dir;
       const sx = baseX - Math.cos(centerAim) * backOffset + Math.cos(perpAngle) * sideOffset;
       const sy = baseY - Math.sin(centerAim) * backOffset + Math.sin(perpAngle) * sideOffset;
-      // Clamp to arena edge
       const dx = sx - cx, dy = sy - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
       let fx = sx, fy = sy;
@@ -597,7 +516,6 @@ function formationVShape() {
   }
 }
 
-// 狂风暴雨: rapid random arrows from all sides (brief barrage)
 function formationStorm() {
   const speed = 3 + Math.min(gameTime * 0.015, 3);
   const count = 20;
@@ -610,45 +528,63 @@ function formationStorm() {
   }
 }
 
-// 追踪箭: arrows that slowly curve toward player position at spawn time
-function formationTracking() {
-  const speed = 2 + Math.min(gameTime * 0.01, 2);
-  const count = 5;
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const sx = cx + Math.cos(angle) * arenaR;
-    const sy = cy + Math.sin(angle) * arenaR;
-    const toPlayer = Math.atan2(player.y - sy, player.x - sx);
-    // Don't aim directly at player, aim near with curve toward player
-    const aimAngle = Math.atan2(cy - sy, cx - sx);
-    const diff = toPlayer - aimAngle;
-    const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    // Curve toward player
-    const curveAmount = normalizedDiff > 0 ? 0.008 : -0.008;
-    addArrow(sx, sy, aimAngle + normalizedDiff * 0.3, speed, { curve: curveAmount * 1.5 });
+// NEW: Two lines from opposite sides
+function formationDoubleLine() {
+  const baseAngle = Math.random() * Math.PI * 2;
+  const speed = 2.5 + Math.min(gameTime * 0.012, 3);
+  const perpAngle = baseAngle + Math.PI / 2;
+  const spacing = 18;
+  const count = 8;
+  for (let side = 0; side < 2; side++) {
+    const angle = baseAngle + side * Math.PI;
+    const baseX = cx + Math.cos(angle) * arenaR;
+    const baseY = cy + Math.sin(angle) * arenaR;
+    const aimAngle = angle + Math.PI;
+    for (let i = 0; i < count; i++) {
+      const offset = (i - (count - 1) / 2) * spacing;
+      const sx = baseX + Math.cos(perpAngle) * offset;
+      const sy = baseY + Math.sin(perpAngle) * offset;
+      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.05, speed);
+    }
+  }
+}
+
+// NEW: Six-direction cross
+function formationDoubleCross() {
+  const speed = 2.5 + Math.min(gameTime * 0.012, 2.5);
+  const baseRotation = Math.random() * Math.PI / 6;
+  const dirs = [];
+  for (let i = 0; i < 6; i++) dirs.push(baseRotation + (Math.PI / 3) * i);
+  const spacing = 15;
+  const count = 6;
+  for (const dir of dirs) {
+    const baseX = cx + Math.cos(dir) * arenaR;
+    const baseY = cy + Math.sin(dir) * arenaR;
+    const perpAngle = dir + Math.PI / 2;
+    const aimAngle = dir + Math.PI;
+    for (let i = 0; i < count; i++) {
+      const offset = (i - (count - 1) / 2) * spacing;
+      const sx = baseX + Math.cos(perpAngle) * offset;
+      const sy = baseY + Math.sin(perpAngle) * offset;
+      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.03, speed);
+    }
   }
 }
 
 function getAvailableFormations() {
   const t = gameTime;
   const f = [];
-
   if (t >= 8)  f.push(formationLine);
   if (t >= 12) f.push(formationFan);
-  if (t >= 20) f.push(formationSpiral);
   if (t >= 25) f.push(formationCross);
-  if (t >= 30) f.push(formationSCurve);
   if (t >= 35) f.push(formationCircle);
   if (t >= 40) f.push(formationVShape);
   if (t >= 45) f.push(formationSpin);
-  if (t >= 50) f.push(formationDualDragon);
   if (t >= 55) f.push(formationCrossWeave);
   if (t >= 60) f.push(formationPulse);
-  if (t >= 65) f.push(formationBounce);
-  if (t >= 70) f.push(formationKaleidoscope);
-  if (t >= 80) f.push(formationTracking);
-  if (t >= 90) f.push(formationStorm);
-
+  if (t >= 70) f.push(formationDoubleLine);
+  if (t >= 80) f.push(formationStorm);
+  if (t >= 90) f.push(formationDoubleCross);
   return f;
 }
 
@@ -669,43 +605,39 @@ function spawnFormation() {
   }
 }
 
-// ========== Knife System ==========
+// ========== Curved Blade System (弯刀, 45s) ==========
 
-function spawnKnife() {
+function spawnBlade() {
   const angle = Math.random() * Math.PI * 2;
   const sx = cx + Math.cos(angle) * arenaR;
   const sy = cy + Math.sin(angle) * arenaR;
   const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.4;
   const speed = 2.5 + Math.min(gameTime * 0.012, 3);
-  addKnife(sx, sy, aimAngle, speed);
+  addBlade(sx, sy, aimAngle, speed);
 }
 
-function spawnKnifeFormation() {
-  // Knife formations that leverage the turning mechanic
-  const knifeFormations = [knifeFormationScatter, knifeFormationSpiral, knifeFormationCross];
-
-  // After 90s, more formations available
+function spawnBladeFormation() {
+  const bladeFormations = [bladeFormationScatter, bladeFormationSpiral, bladeFormationCross];
   if (gameTime >= 90) {
-    knifeFormations.push(knifeFormationPinwheel, knifeFormationBarrage);
+    bladeFormations.push(bladeFormationPinwheel, bladeFormationBarrage, bladeFormationSCurve, bladeFormationDualDragon);
   }
-
-  const fn = knifeFormations[Math.floor(Math.random() * knifeFormations.length)];
+  const fn = bladeFormations[Math.floor(Math.random() * bladeFormations.length)];
   fn();
 }
 
-function knifeFormationScatter() {
-  const count = 3 + Math.floor(Math.min((gameTime - 60) / 30, 5));
+function bladeFormationScatter() {
+  const count = 3 + Math.floor(Math.min((gameTime - 45) / 30, 5));
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
     const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
-    addKnife(sx, sy, aimAngle, speed);
+    addBlade(sx, sy, aimAngle, speed);
   }
 }
 
-function knifeFormationSpiral() {
+function bladeFormationSpiral() {
   const count = 6;
   const baseAngle = Math.random() * Math.PI * 2;
   const speed = 2.5 + Math.min(gameTime * 0.01, 2);
@@ -714,13 +646,12 @@ function knifeFormationSpiral() {
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
-    // Exit angles spiral outward
     const exitAngle = angle + Math.PI * 0.5;
-    addKnife(sx, sy, aimAngle, speed, { exitAngle });
+    addBlade(sx, sy, aimAngle, speed, { exitAngle });
   }
 }
 
-function knifeFormationCross() {
+function bladeFormationCross() {
   const speed = 2.5 + Math.min(gameTime * 0.01, 2);
   const count = 4;
   for (let i = 0; i < count; i++) {
@@ -729,11 +660,11 @@ function knifeFormationCross() {
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
     const exitAngle = angle + Math.PI / 2 + Math.random() * 0.5;
-    addKnife(sx, sy, aimAngle, speed, { exitAngle });
+    addBlade(sx, sy, aimAngle, speed, { exitAngle });
   }
 }
 
-function knifeFormationPinwheel() {
+function bladeFormationPinwheel() {
   const count = 8;
   const speed = 2.5 + Math.min(gameTime * 0.01, 2);
   const rotDir = Math.random() < 0.5 ? 1 : -1;
@@ -743,11 +674,11 @@ function knifeFormationPinwheel() {
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
     const exitAngle = angle + Math.PI + rotDir * 1.2;
-    addKnife(sx, sy, aimAngle, speed, { exitAngle });
+    addBlade(sx, sy, aimAngle, speed, { exitAngle });
   }
 }
 
-function knifeFormationBarrage() {
+function bladeFormationBarrage() {
   const count = 10;
   const speed = 2.5 + Math.min(gameTime * 0.01, 2);
   const baseAngle = Math.random() * Math.PI * 2;
@@ -757,90 +688,203 @@ function knifeFormationBarrage() {
     const sy = cy + Math.sin(angle) * arenaR;
     const aimAngle = Math.atan2(cy - sy, cx - sx);
     const exitAngle = Math.random() * Math.PI * 2;
-    addKnife(sx, sy, aimAngle, speed, { exitAngle });
+    addBlade(sx, sy, aimAngle, speed, { exitAngle });
   }
 }
 
-function updateKnife(k, dt) {
-  k.elapsed += dt;
-  const distToCenter = Math.sqrt((k.x - cx) ** 2 + (k.y - cy) ** 2);
+// S-curve blade formation (blades with alternating exit angles)
+function bladeFormationSCurve() {
+  const count = 6;
+  const baseAngle = Math.random() * Math.PI * 2;
+  const baseX = cx + Math.cos(baseAngle) * arenaR;
+  const baseY = cy + Math.sin(baseAngle) * arenaR;
+  const centerAim = Math.atan2(cy - baseY, cx - baseX);
+  const perpAngle = baseAngle + Math.PI / 2;
+  const speed = 2.5 + Math.min(gameTime * 0.01, 2);
+  for (let i = 0; i < count; i++) {
+    const offset = (i - (count - 1) / 2) * 22;
+    const sx = baseX + Math.cos(perpAngle) * offset;
+    const sy = baseY + Math.sin(perpAngle) * offset;
+    const dir = (i % 2 === 0) ? 1 : -1;
+    const exitAngle = centerAim + dir * 1.0;
+    addBlade(sx, sy, centerAim + (Math.random() - 0.5) * 0.08, speed, { exitAngle });
+  }
+}
 
-  if (k.state === 'approach') {
-    // Move toward center area
-    k.x += k.dx * dt * 60;
-    k.y += k.dy * dt * 60;
+// Dual dragon blade formation
+function bladeFormationDualDragon() {
+  const speed = 2.5 + Math.min(gameTime * 0.01, 2.5);
+  const baseAngle = Math.random() * Math.PI * 2;
+  const count = 8;
+  for (let dragon = 0; dragon < 2; dragon++) {
+    const dir = dragon === 0 ? 1 : -1;
+    for (let i = 0; i < count; i++) {
+      const angle = baseAngle + dir * (i * 0.15);
+      const sx = cx + Math.cos(angle) * arenaR;
+      const sy = cy + Math.sin(angle) * arenaR;
+      const toCenter = Math.atan2(cy - sy, cx - sx);
+      const exitAngle = toCenter + Math.PI - dir * 0.8;
+      addBlade(sx, sy, toCenter + dir * 0.3, speed, { exitAngle });
+    }
+  }
+}
 
-    // Start decelerating when close to center
+// ========== Dagger System (匕首, 60s) ==========
+
+function spawnDagger() {
+  const angle = Math.random() * Math.PI * 2;
+  const sx = cx + Math.cos(angle) * arenaR;
+  const sy = cy + Math.sin(angle) * arenaR;
+  const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.4;
+  const speed = 2.8 + Math.min(gameTime * 0.015, 3);
+  addDagger(sx, sy, aimAngle, speed);
+}
+
+function spawnDaggerFormation() {
+  const daggerFormations = [daggerFormationScatter, daggerFormationCross, daggerFormationSpiral];
+  if (gameTime >= 90) {
+    daggerFormations.push(daggerFormationPinwheel, daggerFormationBarrage);
+  }
+  const fn = daggerFormations[Math.floor(Math.random() * daggerFormations.length)];
+  fn();
+}
+
+function daggerFormationScatter() {
+  const count = 3 + Math.floor(Math.min((gameTime - 60) / 30, 5));
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
+    const sx = cx + Math.cos(angle) * arenaR;
+    const sy = cy + Math.sin(angle) * arenaR;
+    const aimAngle = Math.atan2(cy - sy, cx - sx);
+    const speed = 2.8 + Math.min(gameTime * 0.01, 2.5);
+    addDagger(sx, sy, aimAngle, speed);
+  }
+}
+
+function daggerFormationSpiral() {
+  const count = 6;
+  const baseAngle = Math.random() * Math.PI * 2;
+  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  for (let i = 0; i < count; i++) {
+    const angle = baseAngle + (i / count) * Math.PI * 2;
+    const sx = cx + Math.cos(angle) * arenaR;
+    const sy = cy + Math.sin(angle) * arenaR;
+    const aimAngle = Math.atan2(cy - sy, cx - sx);
+    const exitAngle = angle + Math.PI * 0.6;
+    addDagger(sx, sy, aimAngle, speed, { exitAngle });
+  }
+}
+
+function daggerFormationCross() {
+  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i;
+    const sx = cx + Math.cos(angle) * arenaR;
+    const sy = cy + Math.sin(angle) * arenaR;
+    const aimAngle = Math.atan2(cy - sy, cx - sx);
+    const exitAngle = angle + Math.PI / 2 + Math.random() * 0.5;
+    addDagger(sx, sy, aimAngle, speed, { exitAngle });
+  }
+}
+
+function daggerFormationPinwheel() {
+  const count = 8;
+  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const rotDir = Math.random() < 0.5 ? 1 : -1;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i;
+    const sx = cx + Math.cos(angle) * arenaR;
+    const sy = cy + Math.sin(angle) * arenaR;
+    const aimAngle = Math.atan2(cy - sy, cx - sx);
+    const exitAngle = angle + Math.PI + rotDir * 1.0;
+    addDagger(sx, sy, aimAngle, speed, { exitAngle });
+  }
+}
+
+function daggerFormationBarrage() {
+  const count = 12;
+  const speed = 2.8 + Math.min(gameTime * 0.01, 2);
+  const baseAngle = Math.random() * Math.PI * 2;
+  for (let i = 0; i < count; i++) {
+    const angle = baseAngle + (Math.random() - 0.5) * Math.PI * 0.8;
+    const sx = cx + Math.cos(angle) * arenaR;
+    const sy = cy + Math.sin(angle) * arenaR;
+    const aimAngle = Math.atan2(cy - sy, cx - sx);
+    const exitAngle = Math.random() * Math.PI * 2;
+    addDagger(sx, sy, aimAngle, speed, { exitAngle });
+  }
+}
+
+// ========== Shared Turning Weapon Update ==========
+
+function updateTurningWeapon(w, dt) {
+  w.elapsed += dt;
+  const distToCenter = Math.sqrt((w.x - cx) ** 2 + (w.y - cy) ** 2);
+
+  if (w.state === 'approach') {
+    w.x += w.dx * dt * 60;
+    w.y += w.dy * dt * 60;
     if (distToCenter < arenaR * 0.45) {
-      k.state = 'decelerate';
+      w.state = 'decelerate';
     }
   }
 
-  if (k.state === 'decelerate') {
-    // Slow down smoothly
+  if (w.state === 'decelerate') {
     const decelFactor = 0.92;
-    k.dx *= decelFactor;
-    k.dy *= decelFactor;
-    k.x += k.dx * dt * 60;
-    k.y += k.dy * dt * 60;
-
-    const currentSpeed = Math.sqrt(k.dx * k.dx + k.dy * k.dy);
-    // Start turning when slow enough
-    if (currentSpeed < k.maxSpeed * 0.35) {
-      k.state = 'turning';
-      k.turnProgress = 0;
-      k.currentAngle = Math.atan2(k.dy, k.dx);
+    w.dx *= decelFactor;
+    w.dy *= decelFactor;
+    w.x += w.dx * dt * 60;
+    w.y += w.dy * dt * 60;
+    const currentSpeed = Math.sqrt(w.dx * w.dx + w.dy * w.dy);
+    if (currentSpeed < w.maxSpeed * 0.35) {
+      w.state = 'turning';
+      w.turnProgress = 0;
+      w.currentAngle = Math.atan2(w.dy, w.dx);
     }
   }
 
-  if (k.state === 'turning') {
-    // Smooth arc turn using angle interpolation
-    k.turnProgress += dt / k.turnDuration;
-    if (k.turnProgress > 1) k.turnProgress = 1;
-
-    // Use smooth easing (ease in-out)
-    const t = k.turnProgress;
+  if (w.state === 'turning') {
+    w.turnProgress += dt / w.turnDuration;
+    if (w.turnProgress > 1) w.turnProgress = 1;
+    const t = w.turnProgress;
     const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-    // Interpolate angle
-    const startAngle = k.originalAngle + Math.PI; // roughly toward center then past
-    const angleDiff = k.exitAngle - k.currentAngle;
+    const angleDiff = w.exitAngle - w.currentAngle;
     const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-    const newAngle = k.currentAngle + normalizedDiff * ease * 0.08;
-
-    k.currentAngle = newAngle;
-    const slowSpeed = k.maxSpeed * 0.2;
-    k.dx = Math.cos(newAngle) * slowSpeed;
-    k.dy = Math.sin(newAngle) * slowSpeed;
-    k.x += k.dx * dt * 60;
-    k.y += k.dy * dt * 60;
-
-    if (k.turnProgress >= 1) {
-      k.state = 'accelerate';
-      k.currentAngle = k.exitAngle;
-      k.dx = Math.cos(k.exitAngle) * k.maxSpeed * 0.3;
-      k.dy = Math.sin(k.exitAngle) * k.maxSpeed * 0.3;
+    const newAngle = w.currentAngle + normalizedDiff * ease * 0.08;
+    w.currentAngle = newAngle;
+    const slowSpeed = w.maxSpeed * 0.2;
+    w.dx = Math.cos(newAngle) * slowSpeed;
+    w.dy = Math.sin(newAngle) * slowSpeed;
+    w.x += w.dx * dt * 60;
+    w.y += w.dy * dt * 60;
+    if (w.turnProgress >= 1) {
+      w.state = 'accelerate';
+      w.currentAngle = w.exitAngle;
+      w.dx = Math.cos(w.exitAngle) * w.maxSpeed * 0.3;
+      w.dy = Math.sin(w.exitAngle) * w.maxSpeed * 0.3;
     }
   }
 
-  if (k.state === 'accelerate') {
-    // Speed back up in exit direction
+  if (w.state === 'accelerate') {
     const accelFactor = 1.03;
-    const currentSpeed = Math.sqrt(k.dx * k.dx + k.dy * k.dy);
-    if (currentSpeed < k.maxSpeed * 0.9) {
-      k.dx *= accelFactor;
-      k.dy *= accelFactor;
+    const currentSpeed = Math.sqrt(w.dx * w.dx + w.dy * w.dy);
+    if (currentSpeed < w.maxSpeed * 0.9) {
+      w.dx *= accelFactor;
+      w.dy *= accelFactor;
     }
-    k.x += k.dx * dt * 60;
-    k.y += k.dy * dt * 60;
-    k.state = 'exit';
+    w.x += w.dx * dt * 60;
+    w.y += w.dy * dt * 60;
+    w.state = 'exit';
   }
 
-  if (k.state === 'exit') {
-    k.x += k.dx * dt * 60;
-    k.y += k.dy * dt * 60;
+  if (w.state === 'exit') {
+    w.x += w.dx * dt * 60;
+    w.y += w.dy * dt * 60;
   }
 }
+
+// ========== Main Update ==========
 
 function update(dt) {
   gameTime += dt;
@@ -872,7 +916,7 @@ function update(dt) {
     spawnArrow();
   }
 
-  // Spawn formations
+  // Spawn arrow formations
   const formationRate = Math.max(1.5, 5 - gameTime * 0.03);
   formationTimer += dt;
   while (formationTimer >= formationRate) {
@@ -880,54 +924,41 @@ function update(dt) {
     spawnFormation();
   }
 
-  // Spawn knives after 60s
-  if (gameTime >= 60) {
-    const knifeRate = Math.max(1.5, 5 - (gameTime - 60) * 0.04);
-    knifeTimer += dt;
-    while (knifeTimer >= knifeRate) {
-      knifeTimer -= knifeRate;
-      if (gameTime >= 90 && Math.random() < 0.4) {
-        spawnKnifeFormation();
+  // Spawn curved blades after 45s
+  if (gameTime >= 45) {
+    const bladeRate = Math.max(1.5, 5 - (gameTime - 45) * 0.04);
+    bladeTimer += dt;
+    while (bladeTimer >= bladeRate) {
+      bladeTimer -= bladeRate;
+      if (gameTime >= 60 && Math.random() < 0.4) {
+        spawnBladeFormation();
       } else {
-        const count = 1 + Math.floor(Math.min((gameTime - 60) / 30, 3));
-        for (let i = 0; i < count; i++) spawnKnife();
+        const count = 1 + Math.floor(Math.min((gameTime - 45) / 30, 3));
+        for (let i = 0; i < count; i++) spawnBlade();
       }
     }
   }
 
-  // Update arrows
+  // Spawn daggers after 60s
+  if (gameTime >= 60) {
+    const daggerRate = Math.max(1.5, 5 - (gameTime - 60) * 0.04);
+    daggerTimer += dt;
+    while (daggerTimer >= daggerRate) {
+      daggerTimer -= daggerRate;
+      if (gameTime >= 90 && Math.random() < 0.4) {
+        spawnDaggerFormation();
+      } else {
+        const count = 1 + Math.floor(Math.min((gameTime - 60) / 30, 3));
+        for (let i = 0; i < count; i++) spawnDagger();
+      }
+    }
+  }
+
+  // Update arrows (STRAIGHT ONLY)
   for (let i = arrows.length - 1; i >= 0; i--) {
     const a = arrows[i];
-
-    // Apply curvature (for spiral, S-curve, etc.)
-    if (a.curve !== 0) {
-      const currentAngle = Math.atan2(a.dy, a.dx);
-      const newAngle = currentAngle + a.curve;
-      a.dx = Math.cos(newAngle) * a.speed;
-      a.dy = Math.sin(newAngle) * a.speed;
-
-      // S-curve: reverse curvature after timer
-      if (a.turnTimer > 0) {
-        a.turnTimer--;
-        if (a.turnTimer <= 0) {
-          a.curve = -a.curve;
-        }
-      }
-    }
-
-    // Bounce mechanic
-    if (a.bounceAngle !== undefined && !a.bounced) {
-      const distToCenter = Math.sqrt((a.x - cx) ** 2 + (a.y - cy) ** 2);
-      if (distToCenter < a.bounceDist) {
-        a.bounced = true;
-        a.dx = Math.cos(a.bounceAngle) * a.speed;
-        a.dy = Math.sin(a.bounceAngle) * a.speed;
-      }
-    }
-
     a.x += a.dx * dt * 60;
     a.y += a.dy * dt * 60;
-
     const adx = a.x - cx, ady = a.y - cy;
     if (Math.sqrt(adx * adx + ady * ady) > arenaR + 40) {
       arrows.splice(i, 1);
@@ -940,18 +971,33 @@ function update(dt) {
     }
   }
 
-  // Update knives
-  for (let i = knives.length - 1; i >= 0; i--) {
-    const k = knives[i];
-    updateKnife(k, dt);
-
-    const kdx = k.x - cx, kdy = k.y - cy;
-    if (Math.sqrt(kdx * kdx + kdy * kdy) > arenaR + 40 && k.state === 'exit') {
-      knives.splice(i, 1);
+  // Update curved blades
+  for (let i = blades.length - 1; i >= 0; i--) {
+    const b = blades[i];
+    updateTurningWeapon(b, dt);
+    const bdx = b.x - cx, bdy = b.y - cy;
+    if (Math.sqrt(bdx * bdx + bdy * bdy) > arenaR + 40 && b.state === 'exit') {
+      blades.splice(i, 1);
       continue;
     }
-    const kcx2 = k.x - player.x, kcy2 = k.y - player.y;
-    if (Math.sqrt(kcx2 * kcx2 + kcy2 * kcy2) < PLAYER_HIT_R + 4) {
+    const bcx = b.x - player.x, bcy = b.y - player.y;
+    if (Math.sqrt(bcx * bcx + bcy * bcy) < PLAYER_HIT_R + 4) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Update daggers
+  for (let i = daggers.length - 1; i >= 0; i--) {
+    const d = daggers[i];
+    updateTurningWeapon(d, dt);
+    const ddx = d.x - cx, ddy = d.y - cy;
+    if (Math.sqrt(ddx * ddx + ddy * ddy) > arenaR + 40 && d.state === 'exit') {
+      daggers.splice(i, 1);
+      continue;
+    }
+    const dcx = d.x - player.x, dcy = d.y - player.y;
+    if (Math.sqrt(dcx * dcx + dcy * dcy) < PLAYER_HIT_R + 4) {
       gameOver();
       return;
     }
@@ -962,11 +1008,14 @@ function update(dt) {
   timeText.textContent = `时间: ${gameTime.toFixed(1)}s`;
 }
 
+// ========== Render ==========
+
 function render() {
   ctx.clearRect(0, 0, W, H);
   drawArena();
   for (const a of arrows) drawArrow(a);
-  for (const k of knives) drawKnife(k);
+  for (const b of blades) drawBlade(b);
+  for (const d of daggers) drawDagger(d);
   drawPlayer();
 }
 
@@ -981,9 +1030,8 @@ function loop(ts) {
 
 function startGame() {
   player.x = cx; player.y = cy;
-  arrows = [];
-  knives = [];
-  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; knifeTimer = 0;
+  arrows = []; blades = []; daggers = [];
+  score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0;
   running = true;
   overlay.classList.remove('active');
   overlay.style.display = 'none';
@@ -1003,8 +1051,6 @@ function gameOver() {
   startBtn.textContent = '再来一次';
   overlay.style.display = 'flex';
   overlay.classList.add('active');
-
-  // Submit score to leaderboard
   submitScore(score, gameTime);
 }
 
@@ -1075,5 +1121,4 @@ window.addEventListener('resize', resize);
 // Init
 createPlayerSprite();
 createArrowSprite();
-createKnifeSprite();
 resize();
