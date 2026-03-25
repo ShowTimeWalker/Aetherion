@@ -22,6 +22,7 @@ let daggers = [];
 let score = 0;
 let gameTime = 0;
 let running = false;
+let paused = false;
 let lastTime = 0;
 let spawnTimer = 0;
 let formationTimer = 0;
@@ -1021,6 +1022,11 @@ function render() {
 
 function loop(ts) {
   if (!running) return;
+  if (paused) {
+    lastTime = ts;
+    animFrame = requestAnimationFrame(loop);
+    return;
+  }
   const dt = Math.min((ts - lastTime) / 1000, 0.05);
   lastTime = ts;
   update(dt);
@@ -1028,11 +1034,24 @@ function loop(ts) {
   animFrame = requestAnimationFrame(loop);
 }
 
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  const pauseEl = document.getElementById('pauseOverlay');
+  if (paused) {
+    pauseEl.style.display = 'flex';
+  } else {
+    pauseEl.style.display = 'none';
+  }
+}
+
 function startGame() {
   player.x = cx; player.y = cy;
   arrows = []; blades = []; daggers = [];
   score = 0; gameTime = 0; spawnTimer = 0; formationTimer = 0; bladeTimer = 0; daggerTimer = 0;
   running = true;
+  paused = false;
+  document.getElementById('pauseOverlay').style.display = 'none';
   overlay.classList.remove('active');
   overlay.style.display = 'none';
   hud.style.display = 'flex';
@@ -1114,7 +1133,11 @@ function showLeaderboard() {
   content.innerHTML = html;
 }
 
-window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' && running) { e.preventDefault(); togglePause(); return; }
+  if (paused) { e.preventDefault(); return; }
+  keys[e.code] = true; e.preventDefault();
+});
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('resize', resize);
 
