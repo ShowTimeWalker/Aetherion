@@ -55,8 +55,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 
-const API = "http://localhost:3456";
-
 const props = defineProps<{ show: boolean; mode?: "login" | "register" }>();
 const emit = defineEmits<{
   (e: "close"): void;
@@ -68,6 +66,8 @@ const username = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
+
+const USERS_KEY = "aetherion_users";
 
 watch(
   () => props.show,
@@ -85,34 +85,42 @@ function close() {
   emit("close");
 }
 
+function getUsers(): Record<string, { passwordHash: string; created: number }> {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY) || "{}"); } catch { return {}; }
+}
+
+async function sha256(str: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function handleSubmit() {
   error.value = "";
   loading.value = true;
   try {
-    const endpoint = isLogin.value ? "login" : "register";
-    const res = await fetch(`${API}/api/auth/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.value, password: password.value }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      error.value = data.error || "操作失败";
-      return;
-    }
+    const hash = await sha256(password.value);
+    const users = getUsers();
+
     if (isLogin.value) {
+      if (!users[username.value]) { error.value = "用户不存在"; return; }
+      if (users[username.value].passwordHash !== hash) { error.value = "密码错误"; return; }
       localStorage.setItem("aetherion_user", username.value);
-      localStorage.setItem("aetherion_token", data.token);
+      localStorage.setItem("aetherion_token", btoa(JSON.stringify({ username: username.value, ts: Date.now() })));
       emit("loggedIn", username.value);
       close();
     } else {
-      // Auto-login after register
+      if (username.value.length < 2) { error.value = "用户名至少 2 个字符"; return; }
+      if (password.value.length < 4) { error.value = "密码至少 4 个字符"; return; }
+      if (users[username.value]) { error.value = "用户名已存在"; return; }
+      users[username.value] = { passwordHash: hash, created: Date.now() };
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
       localStorage.setItem("aetherion_user", username.value);
+      localStorage.setItem("aetherion_token", btoa(JSON.stringify({ username: username.value, ts: Date.now() })));
       emit("loggedIn", username.value);
       close();
     }
   } catch {
-    error.value = "无法连接到服务器，请确保后端已启动";
+    error.value = "操作失败";
   } finally {
     loading.value = false;
   }

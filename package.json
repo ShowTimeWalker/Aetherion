@@ -10,11 +10,9 @@
     "prebuild": "node scripts/node/build-games.mjs",
     "build": "node scripts/node/run-pnpm-bin.mjs vue-tsc --noEmit && node scripts/node/run-pnpm-bin.mjs vite build",
     "deploy": "node scripts/node/deploy.mjs",
-    "preview": "node scripts/node/run-pnpm-bin.mjs vite preview",
-    "auth": "node server/auth.mjs"
+    "preview": "node scripts/node/run-pnpm-bin.mjs vite preview"
   },
   "dependencies": {
-    "express": "^5.2.1",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"
   },
