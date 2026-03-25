@@ -30,6 +30,7 @@ onMounted(async () => {
         每一个游戏都是一次小小的冒险，等你来发现。
       </p>
 
+      <p class="hero__eyebrow">Deployment test build: 2026-03-25 10:10 CST</p>
     </div>
   </section>
 
