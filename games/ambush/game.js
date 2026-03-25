@@ -676,6 +676,7 @@ function addBlade(sx, sy, aimAngle, speed, opts = {}) {
     exitAngle: opts.exitAngle != null ? opts.exitAngle : aimAngle + Math.PI + (Math.random() - 0.5) * 1.2,
     elapsed: 0,
   });
+  AudioSystem.playBladeSfx();
 }
 
 function addDagger(sx, sy, aimAngle, speed, opts = {}) {
@@ -692,6 +693,7 @@ function addDagger(sx, sy, aimAngle, speed, opts = {}) {
     exitAngle: opts.exitAngle != null ? opts.exitAngle : aimAngle + Math.PI + (Math.random() - 0.5) * 1.2,
     elapsed: 0,
   });
+  AudioSystem.playBladeSfx();
 }
 
 function spawnArrow() {
@@ -1243,6 +1245,7 @@ function spawnNinja() {
     elapsed: 0,
     hitR: PLAYER_HIT_R + 2,
   });
+  AudioSystem.playNinjaShout();
 }
 
 function updateNinjas(dt) {
@@ -1395,6 +1398,7 @@ function createSmokeBomb(x, y) {
   });
   // Generate smoke particles
   const sb = smokeBombs[smokeBombs.length - 1];
+  AudioSystem.playSmokeBombSfx();
   const count = 25 + Math.floor(Math.random() * 10);
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -1525,6 +1529,7 @@ function update(dt) {
   while (spawnTimer >= spawnRate) {
     spawnTimer -= spawnRate;
     spawnArrow();
+    AudioSystem.playArrowSfx();
   }
 
   // Spawn arrow formations
@@ -1719,6 +1724,10 @@ function startGame() {
   overlay.classList.remove('active');
   overlay.style.display = 'none';
   hud.style.display = 'flex';
+  AudioSystem.init();
+  AudioSystem.resume();
+  AudioSystem.resetNinjaShout();
+  AudioSystem.startMusic();
   lastTime = performance.now();
   animFrame = requestAnimationFrame(loop);
 }
@@ -1726,6 +1735,7 @@ function startGame() {
 function gameOver() {
   running = false;
   cancelAnimationFrame(animFrame);
+  AudioSystem.stopAll();
   hud.style.display = 'none';
   title.textContent = '十面埋伏';
   const t = gameTime;
