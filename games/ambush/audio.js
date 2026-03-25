@@ -17,6 +17,7 @@ const AudioSystem = (() => {
     if (ctx) return;
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
       masterGain = ctx.createGain();
       masterGain.gain.value = 0.7;
       masterGain.connect(ctx.destination);
@@ -420,53 +421,35 @@ const AudioSystem = (() => {
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // Harsh high-pitched scream with vibrato
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
+    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(800, now);
-    osc1.frequency.linearRampToValueAtTime(1200, now + 0.15);
-    osc1.frequency.linearRampToValueAtTime(600, now + 0.8);
-    osc1.frequency.exponentialRampToValueAtTime(200, now + 1.8);
+    // Deep male voice scream
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.linearRampToValueAtTime(350, now + 0.1);
+    osc.frequency.linearRampToValueAtTime(180, now + 1.5);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 2.2);
 
-    osc2.type = 'square';
-    osc2.frequency.setValueAtTime(820, now);
-    osc2.frequency.linearRampToValueAtTime(1250, now + 0.15);
-    osc2.frequency.linearRampToValueAtTime(620, now + 0.8);
-    osc2.frequency.exponentialRampToValueAtTime(180, now + 1.8);
+    // Low-pass filter for deep male tone
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    filter.Q.value = 1;
 
-    // Vibrato on scream
-    const vib = ctx.createOscillator();
-    const vibGain = ctx.createGain();
-    vib.frequency.value = 15;
-    vibGain.gain.value = 60;
-    vib.connect(vibGain);
-    vibGain.connect(osc1.frequency);
-    vibGain.connect(osc2.frequency);
-    vib.start(now);
-    vib.stop(now + 2);
-
-    const mix = ctx.createGain();
-    mix.gain.value = 0.5;
-
-    osc1.connect(mix);
-    osc2.connect(mix);
-    mix.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
 
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
-    gain.gain.setValueAtTime(0.5, now + 0.3);
-    gain.gain.linearRampToValueAtTime(0.35, now + 1.0);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+    gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
+    gain.gain.setValueAtTime(0.6, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.4, now + 1.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
 
     gain.connect(sfxGain);
 
-    osc1.start(now);
-    osc1.stop(now + 2.2);
-    osc2.start(now);
-    osc2.stop(now + 2.2);
+    osc.start(now);
+    osc.stop(now + 2.5);
   }
 
   function resetNinjaShout() {
