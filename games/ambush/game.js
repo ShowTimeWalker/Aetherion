@@ -1380,11 +1380,11 @@ function createSmokeBomb(x, y) {
     x, y,
     phase: 'explode', // explode -> smoke -> fade -> done
     explodeRadius: 0,
-    explodeMaxRadius: 30,
+    explodeMaxRadius: 80,
     explodeTimer: 0,
     explodeDuration: 0.3,
     smokeRadius: 0,
-    smokeMaxRadius: 50 + Math.random() * 20,
+    smokeMaxRadius: 120 + Math.random() * 30,
     smokeAlpha: 0,
     smokeTimer: 0,
     smokeDuration: 4.5,
@@ -1395,16 +1395,16 @@ function createSmokeBomb(x, y) {
   });
   // Generate smoke particles
   const sb = smokeBombs[smokeBombs.length - 1];
-  const count = 12 + Math.floor(Math.random() * 8);
+  const count = 25 + Math.floor(Math.random() * 10);
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * sb.smokeMaxRadius * 0.8;
+    const dist = Math.random() * sb.smokeMaxRadius * 0.9;
     sb.particles.push({
       ox: Math.cos(angle) * dist,
       oy: Math.sin(angle) * dist,
-      r: 8 + Math.random() * 18,
-      drift: (Math.random() - 0.5) * 0.8,
-      driftY: (Math.random() - 0.5) * 0.4,
+      r: 15 + Math.random() * 30,
+      drift: (Math.random() - 0.5) * 1.2,
+      driftY: (Math.random() - 0.5) * 0.6,
       phase: Math.random() * Math.PI * 2,
       alphaBase: 0.15 + Math.random() * 0.2,
     });
@@ -1477,8 +1477,8 @@ function drawSmokeBombs() {
         ctx.fill();
       }
       // Central dense smoke
-      const cAlpha = 0.25 * alpha;
-      const cGrad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.smokeMaxRadius * 0.5);
+      const cAlpha = 0.4 * alpha;
+      const cGrad = ctx.createRadialGradient(sb.x, sb.y, 0, sb.x, sb.y, sb.smokeMaxRadius * 0.7);
       cGrad.addColorStop(0, `rgba(180,175,165,${cAlpha})`);
       cGrad.addColorStop(1, 'rgba(150,145,135,0)');
       ctx.fillStyle = cGrad;
