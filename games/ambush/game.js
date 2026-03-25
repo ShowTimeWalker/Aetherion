@@ -709,7 +709,7 @@ function formationLine() {
   const baseAngle = Math.random() * Math.PI * 2;
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
-  const aimAngle = Math.atan2(cy - baseY, cx - baseX) + (Math.random() - 0.5) * 0.15;
+  const aimAngle = Math.atan2(cy - baseY, cx - baseX) + (Math.random() - 0.5) * 0.6;
   const speed = 2.5 + Math.min(gameTime * 0.012, 3);
   const perpAngle = baseAngle + Math.PI / 2;
   const spacing = 18;
@@ -745,12 +745,12 @@ function formationCross() {
     const baseX = cx + Math.cos(dir) * arenaR;
     const baseY = cy + Math.sin(dir) * arenaR;
     const perpAngle = dir + Math.PI / 2;
-    const aimAngle = dir + Math.PI;
+    const aimAngle = dir + Math.PI + (Math.random() - 0.5) * 0.5;
     for (let i = 0; i < count; i++) {
       const offset = (i - (count - 1) / 2) * spacing;
       const sx = baseX + Math.cos(perpAngle) * offset;
       const sy = baseY + Math.sin(perpAngle) * offset;
-      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.03, speed);
+      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.25, speed);
     }
   }
 }
@@ -762,7 +762,7 @@ function formationCircle() {
     const angle = (Math.PI * 2 / count) * i;
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
-    addArrow(sx, sy, angle + Math.PI, speed);
+    addArrow(sx, sy, angle + Math.PI + (Math.random() - 0.5) * 0.4, speed);
   }
 }
 
@@ -896,7 +896,7 @@ function formationDoubleCross() {
       const offset = (i - (count - 1) / 2) * spacing;
       const sx = baseX + Math.cos(perpAngle) * offset;
       const sy = baseY + Math.sin(perpAngle) * offset;
-      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.03, speed);
+      addArrow(sx, sy, aimAngle + (Math.random() - 0.5) * 0.25, speed);
     }
   }
 }
