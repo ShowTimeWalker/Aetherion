@@ -4,7 +4,7 @@ const scoreNode = document.getElementById("score");
 const statusNode = document.getElementById("status");
 const restartButton = document.getElementById("restart");
 
-const gridSize = 20;
+const gridSize = 25;
 const cellSize = canvas.width / gridSize;
 
 const directions = {
@@ -47,9 +47,9 @@ function updateScore() {
 
 function resetGame() {
   snake = [
-    { x: 9, y: 10 },
-    { x: 8, y: 10 },
-    { x: 7, y: 10 }
+    { x: 12, y: 12 },
+    { x: 11, y: 12 },
+    { x: 10, y: 12 }
   ];
   direction = { x: 1, y: 0 };
   queuedDirection = direction;
