@@ -1829,6 +1829,10 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('resize', resize);
+// Block browser zoom on game canvas (ctrl+scroll)
+window.addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey) e.preventDefault();
+}, { passive: false });
 
 // Init
 createPlayerSprite();
