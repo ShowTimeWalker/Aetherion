@@ -22,7 +22,7 @@ const AudioSystem = (() => {
       masterGain.connect(ctx.destination);
 
       musicGain = ctx.createGain();
-      musicGain.gain.value = 0.25;
+      musicGain.gain.value = 0.5;
       musicGain.connect(masterGain);
 
       sfxGain = ctx.createGain();
@@ -265,8 +265,7 @@ const AudioSystem = (() => {
 
   // ===== Arrow SFX (咻) =====
   function playArrowSfx() {
-    if (!ctx || arrowSfxPool >= MAX_CONCURRENT_SFX) return;
-    arrowSfxPool++;
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     const osc = ctx.createOscillator();
@@ -303,12 +302,12 @@ const AudioSystem = (() => {
     noise.start(now);
     noise.stop(now + 0.15);
 
-    setTimeout(() => arrowSfxPool--, 60);
+    setTimeout(() => {}, 60);
   }
 
   // ===== Blade/Dagger SFX (嗖嗖 - metallic) =====
   function playBladeSfx() {
-    if (!ctx || bladeSfxPool >= MAX_CONCURRENT_SFX) return;
+    if (!ctx) return;
     bladeSfxPool++;
     const now = ctx.currentTime;
 
