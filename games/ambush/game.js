@@ -35,6 +35,7 @@ let keys = {};
 let animFrame;
 
 let playerSprite, arrowSprite, ninjaSprite, shurikenSprite;
+let bambooCache = null;
 
 function createPlayerSprite() {
   const size = 64;
@@ -261,11 +262,13 @@ function resize() {
   cy = H / 2;
   arenaR = s * 0.44;
   playerR = arenaR * 0.03;
+  bambooCache = null;
   if (!running) { player.x = cx; player.y = cy; drawIdle(); }
 }
 
 function drawIdle() {
   ctx.clearRect(0, 0, W, H);
+  drawBambooForest(0);
   drawArena();
   drawPlayer();
 }
@@ -283,6 +286,162 @@ function drawArena() {
   ctx.beginPath(); ctx.arc(cx, cy, arenaR, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(200,160,60,0.12)';
   ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+}
+
+// ========== Bamboo Forest Background ==========
+
+function generateBambooForest() {
+  const stems = [];
+  const leaves = [];
+  const fogBlobs = [];
+
+  // Generate bamboo stems around the arena
+  const numStems = 60;
+  for (let i = 0; i < numStems; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = arenaR * 0.55 + Math.random() * arenaR * 1.5;
+    const x = cx + Math.cos(angle) * dist;
+    const y = cy + Math.sin(angle) * dist;
+    // Check if stem is inside arena
+    const dx = x - cx, dy = y - cy;
+    if (Math.sqrt(dx * dx + dy * dy) < arenaR * 0.85) continue;
+    // Clip to canvas
+    if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue;
+
+    const layer = Math.random(); // 0=far, 1=near
+    const height = 80 + layer * 200 + Math.random() * 120;
+    const width = 3 + layer * 4 + Math.random() * 3;
+    const green = 20 + layer * 40;
+    const r = 10 + layer * 15;
+    const g = green + Math.floor(Math.random() * 20);
+    const b = 8 + layer * 12;
+    const alpha = 0.3 + layer * 0.5;
+    const sway = (Math.random() - 0.5) * 8;
+
+    stems.push({ x, y, height, width, r, g, b, alpha, sway, layer });
+
+    // Add leaves to each stem
+    const numLeaves = 3 + Math.floor(layer * 5) + Math.floor(Math.random() * 4);
+    for (let j = 0; j < numLeaves; j++) {
+      const ly = y - height * (0.15 + Math.random() * 0.8);
+      const lx = x + (Math.random() - 0.5) * 30 + sway * ((y - ly) / height);
+      const leafLen = 12 + Math.random() * 25;
+      const leafAngle = (Math.random() - 0.5) * 1.5 + (lx > x ? 0.3 : -0.3);
+      const leafAlpha = alpha * (0.4 + Math.random() * 0.5);
+      const leafG = g + 15 + Math.floor(Math.random() * 25);
+      leaves.push({ x: lx, y: ly, len: leafLen, angle: leafAngle, r: r - 5, g: leafG, b: b + 5, alpha: leafAlpha, layer });
+    }
+  }
+
+  // Sort by layer for depth
+  stems.sort((a, b) => a.layer - b.layer);
+  leaves.sort((a, b) => a.layer - b.layer);
+
+  // Fog blobs
+  const numFog = 15;
+  for (let i = 0; i < numFog; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = arenaR * 0.3 + Math.random() * arenaR * 1.8;
+    fogBlobs.push({
+      x: cx + Math.cos(angle) * dist,
+      y: cy + Math.sin(angle) * dist,
+      radius: 40 + Math.random() * 100,
+      alpha: 0.03 + Math.random() * 0.06,
+      drift: (Math.random() - 0.5) * 0.5,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  bambooCache = { stems, leaves, fogBlobs };
+}
+
+function drawBambooForest(time) {
+  if (!bambooCache) generateBambooForest();
+  if (!bambooCache) return;
+  const { stems, leaves, fogBlobs } = bambooCache;
+  const t = time || 0;
+
+  // Dark background
+  ctx.fillStyle = '#060d08';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw fog (behind bamboo)
+  for (const f of fogBlobs) {
+    const fx = f.x + Math.sin(t * 0.3 + f.phase) * 20;
+    const fy = f.y + Math.cos(t * 0.2 + f.phase) * 10;
+    const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.radius);
+    grad.addColorStop(0, `rgba(120,160,130,${f.alpha})`);
+    grad.addColorStop(1, 'rgba(120,160,130,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(fx, fy, f.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw stems
+  for (const s of stems) {
+    const swayX = Math.sin(t * 0.5 + s.x * 0.01) * s.sway;
+    const topX = s.x + swayX;
+    ctx.strokeStyle = `rgba(${s.r},${s.g},${s.b},${s.alpha})`;
+    ctx.lineWidth = s.width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    // Slight curve for natural look
+    const midX = s.x + swayX * 0.4;
+    const midY = s.y - s.height * 0.5;
+    ctx.quadraticCurveTo(midX, midY, topX, s.y - s.height);
+    ctx.stroke();
+
+    // Bamboo nodes (joints)
+    const nodeCount = 3 + Math.floor(s.layer * 3);
+    for (let n = 1; n <= nodeCount; n++) {
+      const frac = n / (nodeCount + 1);
+      const nx = s.x + swayX * frac * frac; // sway increases toward top
+      const ny = s.y - s.height * frac;
+      ctx.strokeStyle = `rgba(${s.r - 5},${s.g - 10},${s.b},${s.alpha * 0.8})`;
+      ctx.lineWidth = s.width + 1.5;
+      ctx.beginPath();
+      ctx.moveTo(nx - s.width * 0.8, ny);
+      ctx.lineTo(nx + s.width * 0.8, ny);
+      ctx.stroke();
+    }
+  }
+
+  // Draw leaves
+  for (const l of leaves) {
+    const lx = l.x + Math.sin(t * 0.7 + l.y * 0.02) * 2;
+    ctx.save();
+    ctx.translate(lx, l.y);
+    ctx.rotate(l.angle);
+    ctx.fillStyle = `rgba(${Math.max(0, l.r)},${Math.min(255, l.g)},${Math.min(255, l.b)},${l.alpha})`;
+    ctx.beginPath();
+    // Leaf shape: elongated ellipse
+    ctx.ellipse(0, 0, l.len, l.len * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Leaf vein
+    ctx.strokeStyle = `rgba(${l.r + 20},${l.g - 10},${l.b},${l.alpha * 0.4})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-l.len * 0.8, 0);
+    ctx.lineTo(l.len * 0.8, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // More fog (in front of bamboo, subtle)
+  for (let i = 0; i < fogBlobs.length / 2; i++) {
+    const f = fogBlobs[i];
+    const fx = f.x + Math.sin(t * 0.4 + f.phase + 2) * 25;
+    const fy = f.y + Math.cos(t * 0.3 + f.phase + 1) * 15;
+    const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.radius * 0.7);
+    grad.addColorStop(0, `rgba(80,120,90,${f.alpha * 0.6})`);
+    grad.addColorStop(1, 'rgba(80,120,90,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(fx, fy, f.radius * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawPlayer() {
@@ -1268,6 +1427,7 @@ function update(dt) {
 
 function render() {
   ctx.clearRect(0, 0, W, H);
+  drawBambooForest(gameTime);
   drawArena();
   for (const a of arrows) drawArrow(a);
   for (const b of blades) drawBlade(b);
