@@ -698,7 +698,7 @@ function spawnArrow() {
   const angle = Math.random() * Math.PI * 2;
   const sx = cx + Math.cos(angle) * arenaR;
   const sy = cy + Math.sin(angle) * arenaR;
-  const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.6;
+  const aimAngle = Math.atan2(cy - sy, cx - sx) + (Math.random() - 0.5) * 0.1;
   const speed = 2 + Math.min(gameTime * 0.015, 4);
   addArrow(sx, sy, aimAngle, speed);
 }
@@ -709,7 +709,7 @@ function formationLine() {
   const baseAngle = Math.random() * Math.PI * 2;
   const baseX = cx + Math.cos(baseAngle) * arenaR;
   const baseY = cy + Math.sin(baseAngle) * arenaR;
-  const aimAngle = Math.atan2(cy - baseY, cx - baseX) + (Math.random() - 0.5) * 0.6;
+  const aimAngle = Math.atan2(cy - baseY, cx - baseX) + (Math.random() - 0.5) * (0.3 + Math.random() * 0.7);
   const speed = 2.5 + Math.min(gameTime * 0.012, 3);
   const perpAngle = baseAngle + Math.PI / 2;
   const spacing = 18;
@@ -762,7 +762,7 @@ function formationCircle() {
     const angle = (Math.PI * 2 / count) * i;
     const sx = cx + Math.cos(angle) * arenaR;
     const sy = cy + Math.sin(angle) * arenaR;
-    addArrow(sx, sy, angle + Math.PI + (Math.random() - 0.5) * 0.4, speed);
+    addArrow(sx, sy, angle + Math.PI, speed);
   }
 }
 
@@ -1404,7 +1404,7 @@ function createSmokeBomb(x, y) {
       oy: Math.sin(angle) * dist,
       r: 15 + Math.random() * 30,
       drift: (Math.random() - 0.5) * 1.2,
-      driftY: (Math.random() - 0.5) * 0.6,
+      driftY: (Math.random() - 0.5) * 0.5,
       phase: Math.random() * Math.PI * 2,
       alphaBase: 0.15 + Math.random() * 0.2,
     });
