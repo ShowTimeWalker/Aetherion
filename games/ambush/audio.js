@@ -231,103 +231,30 @@ const AudioSystem = (() => {
     ns.stop(time + 0.08);
   }
 
-  // ===== 背景音乐 - 战斗曲目 =====
-  let musicTimeout = null;
+  // ===== 背景音乐 - MP3 文件播放 =====
+  let bgmAudio = null;
 
   function startMusic() {
-    if (musicPlaying || !ctx) return;
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => { musicPlaying = true; scheduleMusic(); });
-    } else {
-      musicPlaying = true;
-      scheduleMusic();
+    if (musicPlaying) return;
+    if (!bgmAudio) {
+      bgmAudio = new Audio('bgm.mp3');
+      bgmAudio.loop = true;
+      bgmAudio.volume = 0.8;
     }
-  }
-
-  function scheduleMusic() {
-    if (!musicPlaying || !ctx) return;
-    const now = ctx.currentTime + 0.1;
-    playBattleMusic(now);
-    // ~15 seconds per cycle, 48 beats at 192bpm
-    const loopDur = (60 / 192) * 48;
-    if (musicTimeout) clearTimeout(musicTimeout);
-    musicTimeout = setTimeout(scheduleMusic, loopDur * 1000 - 50);
-  }
-
-  function playBattleMusic(t) {
-    const b = 60 / 192; // ~0.312s per beat, very fast
-    const v = 0.55;
-
-    // ===== 琵琶急促轮指 - 全程持续 =====
-    // 模拟《十面埋伏》开篇的密集轮指
-    const pipaRun1 = [NOTES.A3, NOTES.C4, NOTES.E4, NOTES.G4, NOTES.A4, NOTES.G4, NOTES.E4, NOTES.C4];
-    const pipaRun2 = [NOTES.G3, NOTES.A3, NOTES.C4, NOTES.D4, NOTES.E4, NOTES.D4, NOTES.C4, NOTES.A3];
-    const pipaRun3 = [NOTES.E3, NOTES.G3, NOTES.A3, NOTES.C4, NOTES.E4, NOTES.G4, NOTES.A4, NOTES.C5];
-    const pipaRun4 = [NOTES.A3, NOTES.C4, NOTES.E4, NOTES.A4, NOTES.E4, NOTES.C4, NOTES.A3, NOTES.E3];
-
-    // 16th note pipa runs (4 notes per beat)
-    for (let beat = 0; beat < 48; beat++) {
-      const run = beat < 12 ? pipaRun1 : beat < 24 ? pipaRun2 : beat < 36 ? pipaRun3 : pipaRun4;
-      const noteInBeat = beat % run.length;
-      // 4 pipa notes per beat (16th notes)
-      for (let sub = 0; sub < 4; sub++) {
-        const idx = (noteInBeat + sub) % run.length;
-        playPipa(run[idx], t + beat * b + sub * b * 0.25, b * 0.2, v * 0.3);
-      }
-    }
-
-    // ===== 箫 - 肃杀低音长音 =====
-    // 不吹旋律，而是持续低音营造压迫感，偶尔一个音符变化
-    const xiaoNotes = [
-      [NOTES.C3, 6], [NOTES.G3, 4], [NOTES.E3, 6],
-      [NOTES.A3, 4], [NOTES.G3, 6], [NOTES.D3, 6],
-      [NOTES.E3, 4], [NOTES.C3, 6], [NOTES.G3, 6],
-    ];
-    let pos = 0;
-    for (const [freq, beats] of xiaoNotes) {
-      if (pos < 48) {
-        playXiao(freq, t + pos * b, beats * b * 0.95, v * 0.5);
-        pos += beats;
-      }
-    }
-
-    // ===== 笛子 - 尖锐战斗音 =====
-    // 不连续吹，偶尔插一个高音，像战斗中的号角
-    const diziAccents = [
-      [NOTES.A5, 20.5, 0.5],
-      [NOTES.G5, 22, 0.5],
-      [NOTES.A5, 34.5, 0.5],
-      [NOTES.C6, 36, 0.5],
-      [NOTES.A5, 44, 0.5],
-      [NOTES.G5, 46, 0.5],
-    ];
-    for (const [freq, beat, dur] of diziAccents) {
-      playDizi(freq, t + beat * b, dur * b, v * 0.4);
-    }
-
-    // ===== 鼓点 - 密集战斗鼓 =====
-    // 强拍重击 + 每拍都有鼓
-    for (let i = 0; i < 48; i++) {
-      if (i % 4 === 0) {
-        playDrum(t + i * b, v * 0.7); // 大鼓重击
-      } else if (i % 2 === 0) {
-        playDrum(t + i * b, v * 0.35); // 中鼓
-      } else {
-        playDrum(t + i * b, v * 0.15); // 小鼓轻击
-      }
-    }
-
-    // 额外的急促双鼓（每4拍末尾加一个切分）
-    for (let i = 3; i < 48; i += 4) {
-      playDrum(t + (i + 0.5) * b, v * 0.25);
-    }
+    musicPlaying = true;
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    bgmAudio.play().catch(() => {});
   }
 
   function stopMusic() {
     musicPlaying = false;
-    if (musicTimeout) clearTimeout(musicTimeout);
-    musicTimeout = null;
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+    }
   }
+
+  // ===== BGM now plays bgm.mp3 via startMusic() above =====
 
   // ===== Arrow SFX (咻) =====
   function playArrowSfx() {
