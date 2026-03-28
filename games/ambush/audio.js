@@ -256,71 +256,21 @@ const AudioSystem = (() => {
 
   // ===== BGM now plays bgm.mp3 via startMusic() above =====
 
-  // ===== Arrow SFX (咻) =====
-  function playArrowSfx() {
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(2000, now);
-    osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
-    const noise = ctx.createBufferSource();
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
-    noise.buffer = buf;
-    const ng = ctx.createGain();
-    const nf = ctx.createBiquadFilter();
-    nf.type = 'bandpass';
-    nf.frequency.setValueAtTime(3000, now);
-    nf.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
-    nf.Q.value = 2;
-    noise.connect(nf);
-    nf.connect(ng);
-    ng.gain.setValueAtTime(0.15, now);
-    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    ng.connect(sfxGain);
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    osc.connect(gain);
-    gain.connect(sfxGain);
-    osc.start(now);
-    osc.stop(now + 0.15);
-    noise.start(now);
-    noise.stop(now + 0.15);
+  // ===== Generic SFX file player =====
+  function playSfxFile(url) {
+    const audio = new Audio(url);
+    audio.volume = sfxGain ? sfxGain.gain.value : 0.6;
+    audio.play().catch(() => {});
   }
 
-  // ===== Blade/Dagger SFX (嗖嗖 - metallic) =====
+  // ===== Arrow SFX (MP3) =====
+  function playArrowSfx() {
+    playSfxFile('arrow_shot.mp3');
+  }
+
+  // ===== Blade/Dagger SFX (MP3) =====
   function playBladeSfx() {
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 2000;
-    filter.Q.value = 5;
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.gain.setValueAtTime(0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-    gain.connect(sfxGain);
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = 'square';
-    osc2.frequency.value = 3500 + Math.random() * 500;
-    osc2.connect(gain2);
-    gain2.gain.setValueAtTime(0.02, now);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-    gain2.connect(sfxGain);
-    osc.start(now);
-    osc.stop(now + 0.18);
-    osc2.start(now);
-    osc2.stop(now + 0.12);
+    playSfxFile('shuriken_throw.mp3');
   }
 
   // ===== Smoke Bomb SFX (嘭) =====
@@ -369,68 +319,16 @@ const AudioSystem = (() => {
     echo.stop(now + 0.7);
   }
 
-  // ===== Ninja Shout (SpeechSynthesis) =====
+  // ===== Ninja Shout (MP3) =====
   function playNinjaShout() {
     if (ninjaHasShouted) return;
     ninjaHasShouted = true;
-    try {
-      const utterance = new SpeechSynthesisUtterance('手裏剣！！');
-      utterance.lang = 'ja-JP';
-      utterance.rate = 1.2;
-      utterance.pitch = 0.8;
-      utterance.volume = 0.9;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn('SpeechSynthesis not available:', e);
-    }
+    playSfxFile('ninja_voice.mp3');
   }
 
-  // ===== Death Scream =====
+  // ===== Death Scream (MP3) =====
   function playDeathScream() {
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(150, now);
-    osc1.frequency.linearRampToValueAtTime(280, now + 0.08);
-    osc1.frequency.linearRampToValueAtTime(120, now + 2.0);
-    osc1.frequency.exponentialRampToValueAtTime(60, now + 2.5);
-    osc2.type = 'square';
-    osc2.frequency.setValueAtTime(155, now);
-    osc2.frequency.linearRampToValueAtTime(285, now + 0.08);
-    osc2.frequency.linearRampToValueAtTime(125, now + 2.0);
-    osc2.frequency.exponentialRampToValueAtTime(55, now + 2.5);
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 600;
-    filter.Q.value = 0.8;
-    const distortion = ctx.createWaveShaper();
-    const curve = new Float32Array(256);
-    for (let i = 0; i < 256; i++) {
-      const x = (i * 2) / 256 - 1;
-      curve[i] = (Math.PI + 30) * x / (Math.PI + 30 * Math.abs(x));
-    }
-    distortion.curve = curve;
-    const mix = ctx.createGain();
-    mix.gain.value = 0.6;
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(distortion);
-    distortion.connect(mix);
-    mix.connect(gain);
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.7, now + 0.04);
-    gain.gain.setValueAtTime(0.7, now + 0.5);
-    gain.gain.linearRampToValueAtTime(0.45, now + 1.5);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
-    gain.connect(sfxGain);
-    osc1.start(now);
-    osc1.stop(now + 2.8);
-    osc2.start(now);
-    osc2.stop(now + 2.8);
+    playSfxFile('death_sound.mp3');
   }
 
   function resetNinjaShout() {
@@ -439,9 +337,6 @@ const AudioSystem = (() => {
 
   function stopAll() {
     stopMusic();
-    if (ctx) {
-      try { speechSynthesis.cancel(); } catch {}
-    }
   }
 
   return {
