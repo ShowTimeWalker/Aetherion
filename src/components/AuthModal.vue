@@ -181,7 +181,7 @@ async function handleSubmit() {
   background: linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(252, 161, 48, 0.15), rgba(234, 88, 12, 0.2));
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 1.5rem;
-  color: #b45309;
+  color: #e8a849;
   margin-bottom: 16px;
 }
 
@@ -190,7 +190,7 @@ async function handleSubmit() {
   font-family: "Palatino Linotype", "Times New Roman", serif;
   font-size: 1.4rem;
   letter-spacing: 0.04em;
-  color: #2d3748;
+  color: #c7d5e0;
 }
 
 .auth-modal__header p {
@@ -217,9 +217,9 @@ async function handleSubmit() {
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(20, 30, 42, 0.8);
   font-size: 0.95rem;
-  color: #2d3748;
+  color: #c7d5e0;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
