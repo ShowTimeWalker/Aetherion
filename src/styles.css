@@ -306,8 +306,7 @@ select {
 
 .hero__panel {
   padding: 28px;
-  background: linear-gradient(180deg, rgba(234, 88, 12, 0.08), rgba(252, 161, 48, 0.04)),
-    var(--surface-strong);
+  background: linear-gradient(180deg, rgba(234, 88, 12, 0.08), rgba(252, 161, 48, 0.04)), var(--surface-strong);
 }
 
 .hero__panel p {
