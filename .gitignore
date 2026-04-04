@@ -1,9 +1,14 @@
 node_modules/
+node_modules.wsl-backup/
+.pnpm-store/
 dist/
 .vite/
 coverage/
 *.log
+.env
+.env.*
+.local-secrets/
+.workflow/
 public/games/
 public/game-manifest.json
-.local-secrets/
 
