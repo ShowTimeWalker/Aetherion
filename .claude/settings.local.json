@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config:*)",
+      "Bash(git log:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(git filter-repo:*)",
+      "Bash(git remote:*)",
+      "Bash(ssh:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(icacls:*)",
+      "Bash(for f:*)",
+      "Bash(do icacls:*)",
+      "Bash(done)"
+    ]
+  }
+}
