@@ -11,4 +11,5 @@ coverage/
 .workflow/
 public/games/
 public/game-manifest.json
+.claude/settings.local.json
 
