@@ -204,22 +204,47 @@ function runRemoteDeploy(remoteCommand, currentConfig) {
 
   const remoteScript = readFileSync(remoteDeployScriptPath, "utf8");
 
-  runCommand(
-    "ssh",
-    [
-      "-o",
-      "BatchMode=yes",
-      "-o",
-      "ConnectTimeout=10",
-      "-p",
-      currentConfig.serverPort,
-      `${currentConfig.serverUser}@${currentConfig.serverHost}`,
-      remoteCommand
-    ],
-    {
-      input: remoteScript
+  const sshTarget = getSSHConfigHost(currentConfig.serverUser, currentConfig.serverHost);
+  const sshArgs = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"];
+
+  if (sshTarget === `${currentConfig.serverUser}@${currentConfig.serverHost}`) {
+    sshArgs.push("-p", currentConfig.serverPort);
+  }
+
+  sshArgs.push(sshTarget, remoteCommand);
+
+  runCommand("ssh", sshArgs, { input: remoteScript });
+}
+
+function getSSHConfigHost(user, host) {
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  const sshConfigFile = join(homeDir, ".ssh", "config");
+
+  if (!existsSync(sshConfigFile)) {
+    return `${user}@${host}`;
+  }
+
+  try {
+    const content = readFileSync(sshConfigFile, "utf8");
+    const lines = content.split(/\r?\n/);
+    let currentHost = null;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("Host ")) {
+        currentHost = trimmed.split(/\s+/).slice(1)[0];
+      } else if (currentHost && trimmed.startsWith("HostName ")) {
+        const hostName = trimmed.split(/\s+/)[1];
+        if (hostName === host) {
+          return currentHost;
+        }
+      }
     }
-  );
+  } catch {
+    // ignore parse errors
+  }
+
+  return `${user}@${host}`;
 }
 
 function getCommandInvocation(command, commandArgs) {
