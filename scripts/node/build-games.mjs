@@ -7,6 +7,7 @@ const gamesDir = join(rootDir, "games");
 const publicDir = join(rootDir, "public");
 const publicGamesDir = join(publicDir, "games");
 const manifestPath = join(publicDir, "game-manifest.json");
+const pinnedFirstSlugs = ["ambush"];
 
 function toPublicPath(slug, assetPath) {
   if (!assetPath) {
@@ -58,9 +59,30 @@ function collectGames() {
   const directories = readdirSync(gamesDir)
     .map((name) => join(gamesDir, name))
     .filter((entryPath) => statSync(entryPath).isDirectory())
-    .sort((left, right) => left.localeCompare(right));
+    .sort(compareGameDirectories);
 
   return directories.map(readGameEntry);
+}
+
+function compareGameDirectories(left, right) {
+  const leftSlug = basename(left);
+  const rightSlug = basename(right);
+  const leftPinnedIndex = pinnedFirstSlugs.indexOf(leftSlug);
+  const rightPinnedIndex = pinnedFirstSlugs.indexOf(rightSlug);
+
+  if (leftPinnedIndex !== -1 || rightPinnedIndex !== -1) {
+    if (leftPinnedIndex === -1) {
+      return 1;
+    }
+
+    if (rightPinnedIndex === -1) {
+      return -1;
+    }
+
+    return leftPinnedIndex - rightPinnedIndex;
+  }
+
+  return leftSlug.localeCompare(rightSlug);
 }
 
 function syncGames() {
