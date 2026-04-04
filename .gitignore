@@ -7,9 +7,10 @@ coverage/
 *.log
 .env
 .env.*
+.claude/
+.github/
 .local-secrets/
 .workflow/
 public/games/
 public/game-manifest.json
-.claude/settings.local.json
 
